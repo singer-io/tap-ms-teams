@@ -27,72 +27,72 @@ This tap:
 
 ## Streams
 
-[users](https://docs.microsoft.com/en-us/graph/api/user-list?view=graph-rest-beta&tabs=http)
+- [users](https://docs.microsoft.com/en-us/graph/api/user-list?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
-[groups](https://docs.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi%2Fbeta&view=graph-rest-beta)
+- [groups](https://docs.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi%2Fbeta&view=graph-rest-beta)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [group_members](https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http)
+- [group_members](https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [group_owners](https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http)
+- [group_owners](https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [channels](https://docs.microsoft.com/en-us/graph/api/channel-list?view=graph-rest-1.0&tabs=http)
+- [channels](https://docs.microsoft.com/en-us/graph/api/channel-list?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [channel_members](https://docs.microsoft.com/en-us/graph/api/conversationmember-list?view=graph-rest-beta&tabs=http)
+- [channel_members](https://docs.microsoft.com/en-us/graph/api/conversationmember-list?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [channel_tabs](https://docs.microsoft.com/en-us/graph/api/teamstab-list?view=graph-rest-beta)
+- [channel_tabs](https://docs.microsoft.com/en-us/graph/api/teamstab-list?view=graph-rest-beta)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
- [channel_messages](https://docs.microsoft.com/en-us/graph/api/chatmessage-delta?view=graph-rest-beta&tabs=http)
+- [channel_messages](https://docs.microsoft.com/en-us/graph/api/chatmessage-delta?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
   - Transformations: camelCase to snake_case
- [channel_message_replies](https://docs.microsoft.com/en-us/graph/api/channel-list-messagereplies?view=graph-rest-beta&tabs=http)
+- [channel_message_replies](https://docs.microsoft.com/en-us/graph/api/channel-list-messagereplies?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
   - Transformations: camelCase to snake_case
- [conversations](https://docs.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-beta&tabs=http)
+- [conversations](https://docs.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
- [conversation_threads](https://docs.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-beta&tabs=http)
+- [conversation_threads](https://docs.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
- [conversation_posts](https://docs.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-beta&tabs=http)
+- [conversation_posts](https://docs.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-beta&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
- [team_drives](https://docs.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-beta&tabs=http#get-the-document-library-associated-with-a-group)
+- [team_drives](https://docs.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-beta&tabs=http#get-the-document-library-associated-with-a-group)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
