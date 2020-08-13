@@ -1,19 +1,25 @@
+import inspect
 import json
 import sys
 
 import singer
 from singer import Transformer, metadata
+from singer.utils import strftime, strptime_to_utc
 from tap_ms_teams.catalog import generate_catalog
 from tap_ms_teams.client import MicrosoftGraphClient
 from tap_ms_teams.streams import AVAILABLE_STREAMS
 
 LOGGER = singer.get_logger()
 
+
 def discover(client):
     LOGGER.info('Starting Discovery..')
-    streams = [stream_class(client) for _, stream_class in AVAILABLE_STREAMS.items()]
+    streams = [
+        stream_class(client) for _, stream_class in AVAILABLE_STREAMS.items()
+    ]
     catalog = generate_catalog(streams)
     json.dump(catalog, sys.stdout, indent=2)
+
 
 def sync(client, config, catalog, state):
     LOGGER.info('Starting Sync..')
@@ -27,28 +33,74 @@ def sync(client, config, catalog, state):
             stream_keys.append(catalog_entry.stream)
 
         for catalog_entry in streams:
-            stream = AVAILABLE_STREAMS[catalog_entry.stream](client=client, config=config,
-                                                                    catalog=catalog,
-                                                                    state=state)
+            stream = AVAILABLE_STREAMS[catalog_entry.stream](client=client,
+                                                             config=config,
+                                                             catalog=catalog,
+                                                             state=state)
             LOGGER.info('Syncing stream: %s', catalog_entry.stream)
-            stream.write_schema()
-            replication_key = stream.replication_key
-            stream_schema = catalog_entry.schema.to_dict()
-            stream_metadata = metadata.to_map(catalog_entry.metadata)
-            for page in stream.sync(catalog_entry.metadata):
-                for record in page:
-                    singer.write_record(
-                        catalog_entry.stream,
-                        transformer.transform(
-                            record, stream_schema, stream_metadata,
-                        ))
+
             stream.write_state()
 
+            bookmark_date = stream.get_bookmark(stream.name,
+                                                config['start_date'])
+            bookmark_dttm = strptime_to_utc(bookmark_date)
+
+            stream_schema = catalog_entry.schema.to_dict()
+            stream.write_schema()
+            stream_metadata = metadata.to_map(catalog_entry.metadata)
+            max_bookmark_value = None
+            with singer.metrics.job_timer(job_type=stream.name) as timer:
+                with singer.metrics.record_counter(
+                        endpoint=stream.name) as counter:
+                    if stream.replication_method == 'FULL_TABLE':
+                        for page in stream.sync(catalog_entry.metadata):
+                            for record in page:
+                                singer.write_record(
+                                    catalog_entry.stream,
+                                    transformer.transform(
+                                        record,
+                                        stream_schema,
+                                        stream_metadata,
+                                    ))
+                                counter.increment()
+                    else:
+                        for page in stream.sync(catalog_entry.metadata,
+                                                bookmark_date):
+                            for record in page:
+                                max_date = stream.max_from_replication_dates(
+                                    record)
+
+                                if not max_bookmark_value:
+                                    max_bookmark_value = bookmark_date
+
+                                max_bookmark_dttm = strptime_to_utc(
+                                    max_bookmark_value)
+
+                                if max_date > max_bookmark_dttm:
+                                    max_bookmark_value = strftime(max_date)
+
+                                if max_date >= bookmark_dttm:
+                                    singer.write_record(
+                                        catalog_entry.stream,
+                                        transformer.transform(
+                                            record,
+                                            stream_schema,
+                                            stream_metadata,
+                                        ))
+                                    counter.increment()
+                            stream.update_bookmark(stream.name,
+                                                   max_bookmark_value)
+                            stream.write_state()
+
+        # state = singer.set_currently_syncing(state, None)
+        stream.write_state()
         LOGGER.info('Finished Sync..')
 
 
 def main():
-    parsed_args = singer.utils.parse_args(required_config_keys=['client_id', 'client_secret', 'tenant_id'])
+    parsed_args = singer.utils.parse_args(required_config_keys=[
+        'client_id', 'client_secret', 'tenant_id', 'start_date'
+    ])
     config = parsed_args.config
 
     try:

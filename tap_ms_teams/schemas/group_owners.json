@@ -2,6 +2,12 @@
     "type": ["null", "object"],
     "additionalProperties": true,
     "properties": {
+        "id": {
+            "type": ["null", "string"]
+        },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "business_phones": {
             "anyOf": [
                 {
@@ -21,10 +27,10 @@
         "given_name": {
             "type": ["null", "string"]
         },
-        "job_title": {
+        "job_title":{
             "type": ["null", "string"]
         },
-        "mail": {
+        "mail":{
             "type": ["null", "string"]
         },
         "mobile_phone": {
@@ -36,13 +42,10 @@
         "preferred_language": {
             "type": ["null", "string"]
         },
-        "surname": {
+        "surname":{
             "type": ["null", "string"]
         },
         "user_principal_name": {
-            "type": ["null", "string"]
-        },
-        "id": {
             "type": ["null", "string"]
         }
     }

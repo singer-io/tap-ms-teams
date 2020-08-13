@@ -11,7 +11,8 @@ setup(name='tap-ms-teams',
       install_requires=[
           'singer-python==5.9.0',
           'backoff==1.8.0',
-          'requests==2.23.0'
+          'requests==2.23.0',
+          'pyhumps==1.6.1'
       ],
       extras_require={
           'dev': [

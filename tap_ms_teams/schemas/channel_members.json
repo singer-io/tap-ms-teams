@@ -1,0 +1,33 @@
+{
+    "type": ["null", "object"],
+    "additionalProperties": true,
+    "properties": {
+        "id": {
+            "type": ["null", "string"]
+        },
+        "display_name": {
+            "type": ["null", "string"]
+        },
+        "roles": {
+            "anyOf": [{
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
+        },
+        "user_id": {
+            "type": ["null", "string"]
+        },
+        "email": {
+            "type": ["null", "string"]
+        },
+        "channel_id": {
+            "type": ["null", "string"]
+        }
+    }
+}
