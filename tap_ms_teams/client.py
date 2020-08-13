@@ -132,6 +132,9 @@ class MicrosoftGraphClient:
 
         headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
 
+        if self.config.get('user_agent'):
+            headers['User-Agent'] = self.config['user_agent']
+
         if method == "GET":
             LOGGER.info(
                 f"Making {method} request to {url} with params: {params}")
