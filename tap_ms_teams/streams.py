@@ -1,4 +1,3 @@
-import inspect
 import os
 
 import humps
@@ -8,15 +7,17 @@ from singer.utils import strptime_to_utc
 from tap_ms_teams.client import GraphVersion
 
 LOGGER = singer.get_logger()
+TOP_API_PARAM_DEFAULT = 100
 
 
-class Base:
+class GraphStream:
+    # pylint: disable=too-many-instance-attributes,no-member
     def __init__(self, client=None, config=None, catalog=None, state=None):
         self.client = client
         self.config = config
         self.catalog = catalog
         self.state = state
-        self.top = 50
+        self.top = TOP_API_PARAM_DEFAULT
 
     @staticmethod
     def get_abs_path(path):
@@ -52,6 +53,18 @@ class Base:
             return default
         return self.state.get('bookmarks', {}).get(stream, default)
 
+    # Currently syncing sets the stream currently being delivered in the state.
+    # If the integration is interrupted, this state property is used to identify
+    #  the starting point to continue from.
+    # Reference: https://github.com/singer-io/singer-python/blob/master/singer/bookmarks.py#L41-L46
+    def update_currently_syncing(self, stream_name):
+        if (stream_name is None) and ('currently_syncing' in self.state):
+            del self.state['currently_syncing']
+        else:
+            singer.set_currently_syncing(self.state, stream_name)
+        singer.write_state(self.state)
+        LOGGER.info('Stream: {} - Currently Syncing'.format(stream_name))
+
     # Returns max key and date time for all replication key data in record
     def max_from_replication_dates(self, record):
         date_times = {
@@ -61,17 +74,17 @@ class Base:
         max_key = max(date_times)
         return date_times[max_key]
 
-    def sync(self, mdata):
-        resources = self.client.get_all_resources(self.version,
-                                                  self.endpoint,
-                                                  top=self.top,
-                                                  orderby=self.orderby)
+    # pylint: disable=unused-argument
+    def sync(self, client, startdate=None):
+        resources = client.get_all_resources(self.version,
+                                             self.endpoint,
+                                             top=self.top,
+                                             orderby=self.orderby)
 
-        transformed_resources = humps.decamelize(resources)
-        yield resources
+        yield humps.decamelize(resources)
 
 
-class Users(Base):
+class Users(GraphStream):
     name = 'users'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -83,25 +96,32 @@ class Users(Base):
     orderby = 'displayName'
 
 
-class Groups(Base):
+class Groups(GraphStream):
     name = 'groups'
-    version = GraphVersion.V1.value
+    version = GraphVersion.BETA.value
     key_properties = ['id']
     replication_method = 'FULL_TABLE'
     replication_key = None
     endpoint = 'groups'
     valid_replication_keys = []
     date_fields = []
-    orderby = 'displayName'
+    orderby = None
 
-    def get_all_groups(self):
-        return self.client.get_all_resources(self.version,
-                                             Groups.endpoint,
-                                             top=self.top,
-                                             orderby='displayName')
+    # Get all groups with filter for teams with resourceProvisioningOptions
+    # Ensures we get only Team groups
+    # See, https://docs.microsoft.com/en-us/graph/known-issues#missing-teams-in-list-all-teams
+    def get_all_groups(self, client):
+        return client.get_all_resources(
+            self.version,
+            Groups.endpoint,
+            top=self.top,
+            filter_param="resourceProvisioningOptions/Any(x:x eq 'Team')")
+
+    def sync(self, client, startdate=None):
+        yield humps.decamelize(self.get_all_groups(client))
 
 
-class GroupMembers(Groups):
+class GroupMembers(GraphStream):
     name = 'group_members'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -112,10 +132,10 @@ class GroupMembers(Groups):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata):
+    def sync(self, client, startdate=None):
         owners_result = []
-        for group in Groups(self.client).get_all_groups():
-            resources = self.client.get_all_resources(
+        for group in Groups().get_all_groups(client):
+            resources = client.get_all_resources(
                 self.version, self.endpoint.format(group_id=group.get('id')))
 
             # Inject group id
@@ -127,7 +147,7 @@ class GroupMembers(Groups):
         yield owners_result
 
 
-class GroupOwners(Groups):
+class GroupOwners(GraphStream):
     name = 'group_owners'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -138,10 +158,10 @@ class GroupOwners(Groups):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata):
+    def sync(self, client, startdate=None):
         owners_result = []
-        for group in Groups(self.client).get_all_groups():
-            resources = self.client.get_all_resources(
+        for group in Groups().get_all_groups(client):
+            resources = client.get_all_resources(
                 self.version, self.endpoint.format(group_id=group.get('id')))
 
             # Inject group id
@@ -153,7 +173,7 @@ class GroupOwners(Groups):
         yield owners_result
 
 
-class TeamDrives(Groups):
+class TeamDrives(GraphStream):
     name = 'team_drives'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -164,10 +184,10 @@ class TeamDrives(Groups):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata, statedate=None):
+    def sync(self, client, startdate=None):
         owners_result = []
-        for group in Groups(self.client).get_all_groups():
-            resources = self.client.get_all_resources(
+        for group in Groups().get_all_groups(client):
+            resources = client.get_all_resources(
                 self.version, self.endpoint.format(group_id=group.get('id')))
 
             transformed_resources = humps.decamelize(resources)
@@ -175,7 +195,7 @@ class TeamDrives(Groups):
         yield owners_result
 
 
-class Channels(Groups):
+class Channels(GraphStream):
     name = 'channels'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -186,22 +206,22 @@ class Channels(Groups):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata):
+    def sync(self, client, startdate=None):
         channels_result = []
-        for group in Groups(self.client).get_all_groups():
-            resources = self.client.get_all_resources(
+        for group in Groups().get_all_groups(client):
+            resources = client.get_all_resources(
                 self.version, self.endpoint.format(group_id=group.get('id')))
 
             transformed_resources = humps.decamelize(resources)
             channels_result.extend(transformed_resources)
-        yield channels_result
+            yield channels_result
 
-    def get_all_channels_for_group(self, group_id):
-        return self.client.get_all_resources(
+    def get_all_channels_for_group(self, client, group_id):
+        return client.get_all_resources(
             self.version, self.endpoint.format(group_id=group_id))
 
 
-class ChannelMembers(Channels):
+class ChannelMembers(GraphStream):
     name = 'channel_members'
     version = GraphVersion.BETA.value
     key_properties = ['id']
@@ -212,25 +232,28 @@ class ChannelMembers(Channels):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata):
-        channels_result = []
+    def sync(self, client, startdate=None):
         result = []
-        for group in Groups(self.client).get_all_groups():
+
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            for channel in Channels(
-                    self.client).get_all_channels_for_group(group_id):
+
+            for channel in Channels().get_all_channels_for_group(
+                    client, group_id):
                 channel_id = channel.get('id')
-                channel_members = self.client.get_all_resources(
-                    self.version, self.endpoint.format(channel_id=channel_id))
-                for member in channel_members:
+
+                for member in self.get_channel_members(client, channel_id):
                     member['channel_id'] = channel.get('id')
+                    result.append(member)
 
-                transformed_channel_members = humps.decamelize(channel_members)
-                result.extend(transformed_channel_members)
-        yield result
+        yield humps.decamelize(result)
+
+    def get_channel_members(self, client, channel_id):
+        return client.get_all_resources(
+            self.version, self.endpoint.format(channel_id=channel_id))
 
 
-class ChannelTabs(Channels):
+class ChannelTabs(GraphStream):
     name = 'channel_tabs'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -240,15 +263,17 @@ class ChannelTabs(Channels):
     valid_replication_keys = []
     date_fields = []
 
-    def sync(self, mdata):
-        channels_result = []
+    def sync(self, client, startdate=None):
         result = []
-        for group in Groups(self.client).get_all_groups():
+
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            for channel in Channels(
-                    self.client).get_all_channels_for_group(group_id):
+
+            for channel in Channels().get_all_channels_for_group(
+                    client, group_id):
                 channel_id = channel.get('id')
-                channel_tabs = self.client.get_all_resources(
+
+                channel_tabs = client.get_all_resources(
                     self.version,
                     self.endpoint.format(group_id=group_id,
                                          channel_id=channel_id))
@@ -256,12 +281,11 @@ class ChannelTabs(Channels):
                     tab['group_id'] = group_id
                     tab['channel_id'] = channel_id
 
-                transformed_channel_members = humps.decamelize(channel_tabs)
-                result.extend(transformed_channel_members)
-        yield result
+                result.extend(channel_tabs)
+        yield humps.decamelize(result)
 
 
-class ChannelMessages(Channels):
+class ChannelMessages(GraphStream):
     name = 'channel_messages'
     version = GraphVersion.BETA.value
     key_properties = ['id']
@@ -281,14 +305,17 @@ class ChannelMessages(Channels):
             return default
         return self.state.get('bookmarks', {}).get(stream, default)
 
-    def sync(self, mdata, startdate=None):
+    def sync(self, client, startdate=None):
         result = []
-        for group in Groups(self.client).get_all_groups():
-            channels = self.client.get_all_resources(
+        for group in Groups().get_all_groups(client):
+
+            channels = client.get_all_resources(
                 Channels.version,
                 Channels.endpoint.format(group_id=group.get('id')))
+
             for channel in channels:
                 channel_messages = self.get_messages_for_group_channel(
+                    client,
                     group_id=group.get('id'),
                     channel_id=channel.get('id'),
                     startdate=startdate)
@@ -298,21 +325,19 @@ class ChannelMessages(Channels):
                 result.extend(transformed_channel_messages)
         yield result
 
-    def get_messages_for_group_channel(self, group_id, channel_id, startdate):
-        filter_param = self.filter_param.format(
-            replication_key=humps.camelize(self.replication_key),
-            startdate=startdate
-        )
-        endpoint = self.endpoint.format(
-            group_id=group_id,
-            channel_id=channel_id,
-            top=self.top,
-            filter=filter_param
-        )
-        return self.client.get_all_resources(self.version, endpoint)
+    def get_messages_for_group_channel(self, client, group_id, channel_id,
+                                       startdate):
+        filter_param = self.filter_param.format(replication_key=humps.camelize(
+            self.replication_key), startdate=startdate)
+        endpoint = self.endpoint.format(group_id=group_id,
+                                        channel_id=channel_id,
+                                        top=self.top)
+        return client.get_all_resources(self.version,
+                                        endpoint,
+                                        filter_param=filter_param)
 
 
-class ChannelMessageReplies(ChannelMessages):
+class ChannelMessageReplies(GraphStream):
     name = 'channel_message_replies'
     version = GraphVersion.BETA.value
     key_properties = ['id']
@@ -325,30 +350,35 @@ class ChannelMessageReplies(ChannelMessages):
     date_fields = []
     orderby = None
 
-    def sync(self, mdata, startdate=None):
+    def sync(self, client, startdate=None):
         results = []
-        for group in Groups(self.client).get_all_groups():
+
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            for channel in Channels(
-                    self.client).get_all_channels_for_group(group_id=group_id):
+
+            for channel in Channels().get_all_channels_for_group(
+                    client, group_id=group_id):
                 channel_id = channel.get('id')
+
                 for message in ChannelMessages(
-                        self.client).get_messages_for_group_channel(
+                        client).get_messages_for_group_channel(
+                            client,
                             group_id=group_id,
                             channel_id=channel_id,
-                            startdate=None):
+                            startdate=startdate):
                     message_id = message.get('id')
-                    results.extend(
-                        self.client.get_all_resources(
-                            self.version,
-                            self.endpoint.format(group_id=group_id,
-                                                 channel_id=channel_id,
-                                                 message_id=message_id)))
-        transformed_results = humps.decamelize(results)
-        yield transformed_results
+
+                    replies = client.get_all_resources(
+                        self.version,
+                        self.endpoint.format(group_id=group_id,
+                                             channel_id=channel_id,
+                                             message_id=message_id))
+                    results.extend(replies)
+
+        yield humps.decamelize(results)
 
 
-class Conversations(Base):
+class Conversations(GraphStream):
     name = 'conversations'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -359,25 +389,24 @@ class Conversations(Base):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata, startdate=None):
+    def sync(self, client, startdate=None):
         results = []
-        for group in Groups(self.client).get_all_groups():
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
             conversations = self.get_conversations_for_group(
-                group_id=group.get('id'))
+                client, group_id=group.get('id'))
             for conversation in conversations:
                 conversation['group_id'] = group_id
             results.extend(conversations)
 
-        transformed_results = humps.decamelize(results)
-        yield transformed_results
+        yield humps.decamelize(results)
 
-    def get_conversations_for_group(self, group_id):
-        return self.client.get_all_resources(
+    def get_conversations_for_group(self, client, group_id):
+        return client.get_all_resources(
             self.version, self.endpoint.format(group_id=group_id))
 
 
-class ConversationThreads(Conversations):
+class ConversationThreads(GraphStream):
     name = 'conversation_threads'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -388,32 +417,30 @@ class ConversationThreads(Conversations):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata, startdate=None):
+    def sync(self, client, startdate=None):
         result = []
-        for group in Groups(self.client).get_all_groups():
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            for conversation in Conversations(
-                    self.client).get_conversations_for_group(
-                        group_id=group_id):
+            for conversation in Conversations().get_conversations_for_group(
+                    client, group_id=group_id):
                 conversation_id = conversation.get('id')
-                threads = self.get_threads_for_group_conversation(
-                    group_id, conversation_id)
+                threads = self.get_threads_for_group(client, group_id,
+                                                     conversation_id)
                 for thread in threads:
                     thread['group_id'] = group_id
                     thread['conversation_id'] = conversation_id
 
-                transformed_threads = humps.decamelize(threads)
-                result.extend(transformed_threads)
-        yield result
+                result.extend(threads)
+        yield humps.decamelize(result)
 
-    def get_threads_for_group_conversation(self, group_id, conversation_id):
-        return self.client.get_all_resources(
+    def get_threads_for_group(self, client, group_id, conversation_id):
+        return client.get_all_resources(
             self.version,
             self.endpoint.format(group_id=group_id,
                                  conversation_id=conversation_id))
 
 
-class ConversationPosts(ConversationThreads):
+class ConversationPosts(GraphStream):
     name = 'conversation_posts'
     version = GraphVersion.V1.value
     key_properties = ['id', 'change_key']
@@ -424,20 +451,21 @@ class ConversationPosts(ConversationThreads):
     date_fields = []
     orderby = 'displayName'
 
-    def sync(self, mdata, startdate=None):
+    def sync(self, client, startdate=None):
         result = []
-        for group in Groups(self.client).get_all_groups():
+
+        for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            for conversation in Conversations(
-                    self.client).get_conversations_for_group(
-                        group_id=group_id):
+
+            for conversation in Conversations().get_conversations_for_group(
+                    client, group_id=group_id):
                 conversation_id = conversation.get('id')
-                for thread in ConversationThreads(
-                        self.client).get_threads_for_group_conversation(
-                            group_id=group_id,
-                            conversation_id=conversation_id):
+
+                for thread in ConversationThreads().get_threads_for_group(
+                        client, group_id=group_id,
+                        conversation_id=conversation_id):
                     thread_id = thread.get('id')
-                    posts = self.client.get_all_resources(
+                    posts = client.get_all_resources(
                         self.version,
                         self.endpoint.format(group_id=group_id,
                                              conversation_id=conversation_id,
@@ -447,9 +475,8 @@ class ConversationPosts(ConversationThreads):
                         post['conversation_id'] = conversation_id
                         post['group_id'] = group_id
 
-                    transformed_posts = humps.decamelize(posts)
-                    result.extend(transformed_posts)
-        yield result
+                    result.extend(posts)
+        yield humps.decamelize(result)
 
 
 AVAILABLE_STREAMS = {

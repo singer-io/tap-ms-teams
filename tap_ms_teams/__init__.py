@@ -39,22 +39,45 @@ def sync(client, config, catalog, state):
                                                              state=state)
             LOGGER.info('Syncing stream: %s', catalog_entry.stream)
 
+            stream.update_currently_syncing(stream.name)
             stream.write_state()
+            stream_schema = catalog_entry.schema.to_dict()
+            stream.write_schema()
+            stream_metadata = metadata.to_map(catalog_entry.metadata)
 
             bookmark_date = stream.get_bookmark(stream.name,
                                                 config['start_date'])
             bookmark_dttm = strptime_to_utc(bookmark_date)
-
-            stream_schema = catalog_entry.schema.to_dict()
-            stream.write_schema()
-            stream_metadata = metadata.to_map(catalog_entry.metadata)
             max_bookmark_value = None
-            with singer.metrics.job_timer(job_type=stream.name) as timer:
-                with singer.metrics.record_counter(
-                        endpoint=stream.name) as counter:
-                    if stream.replication_method == 'FULL_TABLE':
-                        for page in stream.sync(catalog_entry.metadata):
-                            for record in page:
+
+            with singer.metrics.record_counter(endpoint=stream.name) as counter:
+                if stream.replication_method == 'FULL_TABLE':
+                    for page in stream.sync(client):
+                        for record in page:
+                            singer.write_record(
+                                catalog_entry.stream,
+                                transformer.transform(
+                                    record,
+                                    stream_schema,
+                                    stream_metadata,
+                                ))
+                            counter.increment()
+                else:
+                    for page in stream.sync(client, bookmark_date):
+                        for record in page:
+                            max_date = stream.max_from_replication_dates(
+                                record)
+
+                            if not max_bookmark_value:
+                                max_bookmark_value = bookmark_date
+
+                            max_bookmark_dttm = strptime_to_utc(
+                                max_bookmark_value)
+
+                            if max_date > max_bookmark_dttm:
+                                max_bookmark_value = strftime(max_date)
+
+                            if max_date >= bookmark_dttm:
                                 singer.write_record(
                                     catalog_entry.stream,
                                     transformer.transform(
@@ -63,36 +86,9 @@ def sync(client, config, catalog, state):
                                         stream_metadata,
                                     ))
                                 counter.increment()
-                    else:
-                        for page in stream.sync(catalog_entry.metadata,
-                                                bookmark_date):
-                            for record in page:
-                                max_date = stream.max_from_replication_dates(
-                                    record)
-
-                                if not max_bookmark_value:
-                                    max_bookmark_value = bookmark_date
-
-                                max_bookmark_dttm = strptime_to_utc(
-                                    max_bookmark_value)
-
-                                if max_date > max_bookmark_dttm:
-                                    max_bookmark_value = strftime(max_date)
-
-                                if max_date >= bookmark_dttm:
-                                    singer.write_record(
-                                        catalog_entry.stream,
-                                        transformer.transform(
-                                            record,
-                                            stream_schema,
-                                            stream_metadata,
-                                        ))
-                                    counter.increment()
-                            stream.update_bookmark(stream.name,
-                                                   max_bookmark_value)
-                            stream.write_state()
-
-        # state = singer.set_currently_syncing(state, None)
+                        stream.update_bookmark(stream.name, max_bookmark_value)
+                        stream.write_state()
+            stream.update_currently_syncing(None)
         stream.write_state()
         LOGGER.info('Finished Sync..')
 
