@@ -1,4 +1,7 @@
 # tap-ms-teams
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[Python 3.5](https://www.python.org/downloads/release/python-352/)
+
 
 This is a [Singer](https://singer.io) tap that produces JSON-formatted data
 following the [Singer
@@ -99,8 +102,61 @@ This tap:
   - Bookmark: lastModifiedDateTime
   - Transformations: camelCase to snake_case
 
-## Authentication
+## App and Authentication
 
+The Microsoft Graph API uses OAuth for authentication. Follow these instructions for creating an app in the Azure portal. This process will produce the `client_id`, `client_secret`, and `tenant_id` needed for the tap configuration file.
+
+[Register a new application with the Azure portal
+](https://docs.microsoft.com/en-us/graph/auth-register-app-v2#register-a-new-application-using-the-azure-portal)
+
+1. Login to [Azure Portal](https://portal.azure.com/#home)
+2. Click upper-left menu icon and select Azure Active Directory
+3. Select App Registrations
+4. Click New registration
+5. Register an application
+   1. Name: tap-microsoft-teams
+   2. Supported account types: Accounts in this organizational directory only
+   3. Redirect URL: Web - https://YOURDOMAIN/callback
+   4. Register (button)
+6. Record the client_id, tenant_id, and application_id (Object ID) which will be used by the tap for authentication and API integration. 
+7. Select Branding
+   1. Name: tap-microsoft-teams
+   2. Logo: [singer-io-logo.png, 512x512 px]
+   3. Homepage URL: https://YOURDOMAIN
+   4. ToS URL: https://www.stitchdata.com/eula/
+   5. Privacy URL: https://www.stitchdata.com/privacy/
+   6. Save
+8. Select Authentication
+   1. Platform configurations: Web (already setup)
+   2. Supported account types: (already setup)
+   3. Logout URL: https://app.stitchdata.com/session/create
+   4. Access tokens: checked
+   5. Public client: No
+   6. Save
+9. Select Certificates & secrets
+10. Provide Description and Expires
+    1.  Description: tap-microsoft-teams client secret
+    2.  Expires: Never
+    3.  Add
+11. Copy the client secret Value, this will be the client_secret
+12. Select API permissions
+    1.  Click Add a permission
+13. Select Microsoft Graph
+14. Select Application permissions
+15. Select the following permissions:
+    1.  Application > Application.Read.All
+    2.  Calendars > Calendars.Read?
+    3.  Chat > Chat.Read.All
+    4.  Files > Files.Read.All
+    5.  Group > Group.Read.All
+    6.  Notes > Notes.Read.All
+    7.  OnlineMeetings > OnlineMeetings.Read.All
+    8.  Reports > Reports.Read.All
+    9.  Schedule > Schedule.Read.All
+    10. Team > Team.ReadBasic.All
+    11. User > User.Read.All
+16. Click Add permissions
+    
 
 ## Quick Start
 
