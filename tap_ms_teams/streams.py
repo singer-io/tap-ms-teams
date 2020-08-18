@@ -1,10 +1,12 @@
 import os
+from datetime import timedelta
 
 import humps
 import singer
 import singer.metrics
-from singer.utils import strptime_to_utc
+from singer.utils import now, strptime_to_utc
 from tap_ms_teams.client import GraphVersion
+from tap_ms_teams.transform import transform
 
 LOGGER = singer.get_logger()
 TOP_API_PARAM_DEFAULT = 100
@@ -73,6 +75,39 @@ class GraphStream:
         }
         max_key = max(date_times)
         return date_times[max_key]
+
+    def remove_hours_local(self, dttm):
+        new_dttm = dttm.replace(hour=0, minute=0, second=0, microsecond=0)
+        return new_dttm
+
+    # Round time based to day
+    def round_times(self, start=None, end=None):
+        start_rounded = None
+        end_rounded = None
+        # Round min_start, max_end to hours or dates
+        start_rounded = self.remove_hours_local(start) - timedelta(days=1)
+        end_rounded = self.remove_hours_local(end) + timedelta(days=1)
+        return start_rounded, end_rounded
+
+    # Determine absolute start and end times w/ attribution_window constraint
+    # abs_start/end and window_start/end must be rounded to nearest hour or day (granularity)
+    # Graph API enforces max history of 28 days
+    def get_absolute_start_end_time(self, last_dttm, attribution_window):
+        now_dttm = now()
+        delta_days = (now_dttm - last_dttm).days
+        if delta_days < attribution_window:
+            start = now_dttm - timedelta(days=attribution_window)
+        # 28 days NOT including current
+        elif delta_days > 26:
+            start = now_dttm - timedelta(26)
+            LOGGER.info(
+                'Start date exceeds max. Setting start date to {}'
+                .format(start))
+        else:
+            start = last_dttm
+
+        abs_start, abs_end = self.round_times(start, now_dttm)
+        return abs_start, abs_end
 
     # pylint: disable=unused-argument
     def sync(self, client, startdate=None):
@@ -479,6 +514,32 @@ class ConversationPosts(GraphStream):
         yield humps.decamelize(result)
 
 
+class TeamDeviceUsageReport(GraphStream):
+    name = 'team_device_usage_report'
+    version = GraphVersion.BETA.value
+    key_properties = ['user_principal_name', 'report_refresh_date']
+    replication_method = 'INCREMENTAL'
+    replication_key = 'report_refresh_date'
+    endpoint = 'reports/getTeamsDeviceUsageUserDetail(date={date})?$format=text/csv'
+    valid_replication_keys = ['report_refresh_date']
+    date_fields = []
+    orderby = None
+    DATE_WINDOW_SIZE = 1
+
+    def sync(self, client, startdate=None):
+        last_dttm = strptime_to_utc(startdate)
+        abs_start, abs_end = self.get_absolute_start_end_time(
+            last_dttm, self.config.get('attribution_widnow', 7))
+        window_start = abs_start
+        while window_start != abs_end:
+            report_date_str = window_start.strftime("%Y-%m-%d")
+            for page in self.client.get_report(
+                    self.version, self.endpoint.format(date=report_date_str)):
+                transformed = transform(page)
+                yield humps.decamelize(transformed)
+            window_start = window_start + timedelta(days=self.DATE_WINDOW_SIZE)
+
+
 AVAILABLE_STREAMS = {
     "users": Users,
     "groups": Groups,
@@ -492,5 +553,6 @@ AVAILABLE_STREAMS = {
     "conversations": Conversations,
     "conversation_threads": ConversationThreads,
     "conversation_posts": ConversationPosts,
-    "team_drives": TeamDrives
+    "team_drives": TeamDrives,
+    "team_device_usage_report": TeamDeviceUsageReport
 }

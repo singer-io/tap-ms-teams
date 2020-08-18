@@ -65,19 +65,17 @@ def sync(client, config, catalog, state):
                 else:
                     for page in stream.sync(client, bookmark_date):
                         for record in page:
-                            max_date = stream.max_from_replication_dates(
-                                record)
-
                             if not max_bookmark_value:
                                 max_bookmark_value = bookmark_date
-
                             max_bookmark_dttm = strptime_to_utc(
                                 max_bookmark_value)
 
-                            if max_date > max_bookmark_dttm:
-                                max_bookmark_value = strftime(max_date)
+                            record_timestamp = stream.max_from_replication_dates(
+                                record)
+                            if record_timestamp > max_bookmark_dttm:
+                                max_bookmark_value = strftime(record_timestamp)
 
-                            if max_date >= bookmark_dttm:
+                            if record_timestamp >= bookmark_dttm:
                                 singer.write_record(
                                     catalog_entry.stream,
                                     transformer.transform(

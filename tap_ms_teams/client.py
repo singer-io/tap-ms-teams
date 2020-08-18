@@ -1,6 +1,9 @@
+import codecs
+import csv
 import threading
 import urllib
 from enum import Enum
+import time
 
 import backoff
 import requests
@@ -112,6 +115,63 @@ class MicrosoftGraphClient:
         (Server5xxError, ConnectionError, Server42xRateLimitError),
         max_tries=5,
         factor=2)
+    def get_report(self, version, endpoint):
+        headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
+        if self.config.get('user_agent'):
+            headers['User-Agent'] = self.config['user_agent']
+
+        url = self.build_url(BASE_GRAPH_URL, version, endpoint, {})
+
+        LOGGER.info(
+            "Making request to {}".format(url))
+        response = self.session.get(url, headers=headers, allow_redirects=True)
+
+        if response.status_code == 401:
+            LOGGER.info(
+                "Received unauthorized error code, retrying: {}".format(
+                    response.text))
+            self.login()
+        elif response.status_code == 429:
+            retry_after = int(response.headers.get('Retry-After'))
+            LOGGER.info("Received rate limit response sleeping for : {}".format(
+                retry_after))
+            time.sleep(retry_after)
+            raise Server42xRateLimitError()
+        elif response.status_code >= 500:
+            raise Server5xxError()
+
+        if response.status_code not in [200, 201, 202]:
+            raise RuntimeError(response.text)
+
+        return self.stream_csv(response.url)
+
+
+    # Stream CSV in batches of lines for transform and Singer write
+    @backoff.on_exception(backoff.expo, (Server5xxError, ConnectionError),
+                          max_tries=5,
+                          factor=2)
+    def stream_csv(self, url, batch_size=1024):
+        with requests.get(url, stream=True) as data:
+            reader = csv.DictReader(
+                # Correctly decoded for BOM which are produced by the API
+                # See, https://docs.python.org/2.5/lib/module-encodings.utf-8-sig.html
+                codecs.iterdecode(data.iter_lines(chunk_size=1024), "utf-8-sig"))
+            batch = []
+
+            for record in reader:
+                batch.append(record)
+                if len(batch) == batch_size:
+                    yield batch
+                    batch = []
+            if batch:
+                yield batch
+
+
+    @backoff.on_exception(
+        backoff.expo,
+        (Server5xxError, ConnectionError, Server42xRateLimitError),
+        max_tries=5,
+        factor=2)
     def make_request(self, method, url=None, params=None, data=None):
 
         headers = {'Authorization': 'Bearer {}'.format(self.access_token)}
@@ -122,7 +182,7 @@ class MicrosoftGraphClient:
         if method == "GET":
             LOGGER.info(
                 "Making {} request to {} with params: {}".format(method, url, params))
-            response = self.session.get(url, headers=headers)
+            response = self.session.get(url, headers=headers, allow_redirects=True)
         elif method == "POST":
             LOGGER.info("Making {} request to {} with body {}".format(method, url, data))
             response = self.session.post(url, data=data)
@@ -139,6 +199,8 @@ class MicrosoftGraphClient:
         elif response.status_code == 429:
             LOGGER.info("Received rate limit response: {}".format(
                 response.headers))
+            retry_after = int(response.headers.get('Retry-After'))
+            time.sleep(retry_after)
             raise Server42xRateLimitError()
         elif response.status_code >= 500:
             raise Server5xxError()

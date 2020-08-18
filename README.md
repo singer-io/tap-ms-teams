@@ -24,7 +24,7 @@ This tap:
   - [conversation_threads](https://docs.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-beta&tabs=http)
   - [conversation_posts](https://docs.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-beta&tabs=http)
   - [team_drives](https://docs.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-beta&tabs=http#get-the-document-library-associated-with-a-group)
-
+  - [team_device_usage_report](https://docs.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-beta)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
@@ -100,6 +100,11 @@ This tap:
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastModifiedDateTime
+  - Transformations: camelCase to snake_case
+- [team_device_usage_report](https://docs.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-beta)
+  - Primary keys: id
+  - Replication strategy: Incremental (query all, filter results)
+  - Bookmark: report_refresh_date
   - Transformations: camelCase to snake_case
 
 ## App and Authentication
