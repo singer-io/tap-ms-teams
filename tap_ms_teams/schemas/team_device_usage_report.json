@@ -1,0 +1,43 @@
+{
+    "type": ["null", "object"],
+    "additionalProperties": true,
+    "properties": {
+        "reportRefreshDate": {
+            "type": ["null", "string"]
+        },
+        "userPrincipalName": {
+            "type": ["null", "string"]
+        },
+        "lastActivityDate": {
+            "type": ["null", "string"]
+        },
+        "isDeleted": {
+            "type": ["null", "boolean"]
+        },
+        "deletedDate": {
+            "type": ["null", "string"]
+        },
+        "usedWeb": {
+            "type": ["null", "boolean"]
+        },
+        "usedWindowsPhone": {
+            "type": ["null", "boolean"]
+        },
+        "usediOS": {
+            "type": ["null", "boolean"]
+        },
+        "usedMac": {
+            "type": ["null", "boolean"]
+        },
+        "usedAndroidPhone": {
+            "type": ["null", "boolean"]
+        },
+        "usedWindows": {
+            "type": ["null", "boolean"]
+        },
+        "reportPeriod": {
+            "type": ["null", "string"]
+        }
+    }
+}
+

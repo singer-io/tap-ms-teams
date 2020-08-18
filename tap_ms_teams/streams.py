@@ -74,6 +74,24 @@ class GraphStream:
         max_key = max(date_times)
         return date_times[max_key]
 
+    # Determine absolute start and end times w/ attribution_window constraint
+    # abs_start/end and window_start/end must be rounded to nearest hour or day (granularity)
+    def get_absolute_start_end_time(self, last_dttm, attribution_window):
+        now_dttm = utils.now()
+        delta_days = (now_dttm - last_dttm).days
+        if delta_days < attribution_window:
+            start = now_dttm - timedelta(days=attribution_window)
+        elif delta_days > 89:
+            start = now_dttm - timedelta(88)
+            LOGGER.info(
+                'Start date with attribution window exceeds max API history. Setting start date to {}'
+                .format(start))
+        else:
+            start = last_dttm
+
+        abs_start, abs_end = round_times(start, now_dttm)
+        return abs_start, abs_end
+
     # pylint: disable=unused-argument
     def sync(self, client, startdate=None):
         resources = client.get_all_resources(self.version,
@@ -479,6 +497,23 @@ class ConversationPosts(GraphStream):
         yield humps.decamelize(result)
 
 
+class TeamDeviceUsageReport(GraphStream):
+    name = 'team_device_usage_report'
+    version = GraphVersion.BETA.value
+    key_properties = ['user_principal_name', 'report_refresh_date']
+    replication_method = 'INCREMENTAL'
+    replication_key = 'last_activity_date'
+    endpoint = 'reports/getTeamsDeviceUsageUserDetail(date={date})'
+    valid_replication_keys = ['last_activity_date']
+    date_fields = []
+    orderby = 'displayName'
+
+    def sync(self, client, startdate=None):
+        result = []
+        abs_start, abs_end = get_absolute_start_end_time(last_dttm,
+                                                     attribution_window)
+
+
 AVAILABLE_STREAMS = {
     "users": Users,
     "groups": Groups,
@@ -492,5 +527,6 @@ AVAILABLE_STREAMS = {
     "conversations": Conversations,
     "conversation_threads": ConversationThreads,
     "conversation_posts": ConversationPosts,
-    "team_drives": TeamDrives
+    "team_drives": TeamDrives,
+    "team_device_usage_report": TeamDeviceUsageReport
 }
