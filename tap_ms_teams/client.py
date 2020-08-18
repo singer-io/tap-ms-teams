@@ -109,7 +109,7 @@ class MicrosoftGraphClient:
                 next_url = None
         return response
 
-    
+
     @backoff.on_exception(
         backoff.expo,
         (Server5xxError, ConnectionError, Server42xRateLimitError),
@@ -144,15 +144,17 @@ class MicrosoftGraphClient:
             raise RuntimeError(response.text)
 
         return self.stream_csv(response.url)
- 
-    
+
+
     # Stream CSV in batches of lines for transform and Singer write
     @backoff.on_exception(backoff.expo, (Server5xxError, ConnectionError),
-                        max_tries=5,
-                        factor=2)
+                          max_tries=5,
+                          factor=2)
     def stream_csv(self, url, batch_size=1024):
         with requests.get(url, stream=True) as data:
             reader = csv.DictReader(
+                # Correctly decoded for BOM which are produced by the API
+                # See, https://docs.python.org/2.5/lib/module-encodings.utf-8-sig.html
                 codecs.iterdecode(data.iter_lines(chunk_size=1024), "utf-8-sig"))
             batch = []
 
@@ -197,8 +199,8 @@ class MicrosoftGraphClient:
         elif response.status_code == 429:
             LOGGER.info("Received rate limit response: {}".format(
                 response.headers))
-            retry_after = int(repsonse.headers.get('Retry-After'))
-            time.wait(retry_after)
+            retry_after = int(response.headers.get('Retry-After'))
+            time.sleep(retry_after)
             raise Server42xRateLimitError()
         elif response.status_code >= 500:
             raise Server5xxError()

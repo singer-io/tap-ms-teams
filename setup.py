@@ -21,7 +21,7 @@ setup(name='tap-ms-teams',
               'nose',
           ]
       },
-      python_requires='>=3.5.6',
+      python_requires='>=3.5.2',
       entry_points='''
           [console_scripts]
           tap-ms-teams=tap_ms_teams:main

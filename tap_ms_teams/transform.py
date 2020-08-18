@@ -1,4 +1,3 @@
-import humps
 import re
 import singer
 
