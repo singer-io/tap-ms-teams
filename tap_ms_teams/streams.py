@@ -45,8 +45,7 @@ class GraphStream:
         if 'bookmarks' not in self.state:
             self.state['bookmarks'] = {}
         self.state['bookmarks'][stream] = value
-        LOGGER.info('Stream: {} - Write state, bookmark value: {}'.format(
-            stream, value))
+        LOGGER.info('Stream: %s - Write state, bookmark value: %s', stream, value)
         self.write_state()
 
     def get_bookmark(self, stream, default):
@@ -65,7 +64,7 @@ class GraphStream:
         else:
             singer.set_currently_syncing(self.state, stream_name)
         singer.write_state(self.state)
-        LOGGER.info('Stream: {} - Currently Syncing'.format(stream_name))
+        LOGGER.info('Stream: %s - Currently Syncing', stream_name)
 
     # Returns max key and date time for all replication key data in record
     def max_from_replication_dates(self, record):
@@ -76,7 +75,7 @@ class GraphStream:
         max_key = max(date_times)
         return date_times[max_key]
 
-    def remove_hours_local(self, dttm):
+    def remove_hours_local(self, dttm): # pylint: disable = no-self-use
         new_dttm = dttm.replace(hour=0, minute=0, second=0, microsecond=0)
         return new_dttm
 
@@ -100,9 +99,7 @@ class GraphStream:
         # 28 days NOT including current
         elif delta_days > 26:
             start = now_dttm - timedelta(26)
-            LOGGER.info(
-                'Start date exceeds max. Setting start date to {}'
-                .format(start))
+            LOGGER.info('Start date exceeds max. Setting start date to %s', start)
         else:
             start = last_dttm
 
