@@ -99,7 +99,7 @@ class MicrosoftGraphClient:
 
         response = []
         while next_url:
-            LOGGER.info("Making request GET {}".format(next_url))
+            LOGGER.info("Making request GET %s", next_url)
             body = self.make_request('GET', url=next_url)
             if body:
                 next_url = body.get('@odata.nextLink', None)
@@ -122,19 +122,15 @@ class MicrosoftGraphClient:
 
         url = self.build_url(BASE_GRAPH_URL, version, endpoint, {})
 
-        LOGGER.info(
-            "Making request to {}".format(url))
+        LOGGER.info("Making request to %s", url)
         response = self.session.get(url, headers=headers, allow_redirects=True)
 
         if response.status_code == 401:
-            LOGGER.info(
-                "Received unauthorized error code, retrying: {}".format(
-                    response.text))
+            LOGGER.info("Received unauthorized error code, retrying: %s", response.text)
             self.login()
         elif response.status_code == 429:
             retry_after = int(response.headers.get('Retry-After'))
-            LOGGER.info("Received rate limit response sleeping for : {}".format(
-                retry_after))
+            LOGGER.info("Received rate limit response sleeping for : %s", retry_after)
             time.sleep(retry_after)
             raise Server42xRateLimitError()
         elif response.status_code >= 500:
@@ -150,7 +146,7 @@ class MicrosoftGraphClient:
     @backoff.on_exception(backoff.expo, (Server5xxError, ConnectionError),
                           max_tries=5,
                           factor=2)
-    def stream_csv(self, url, batch_size=1024):
+    def stream_csv(self, url, batch_size=1024): # pylint: disable = no-self-use
         with requests.get(url, stream=True) as data:
             reader = csv.DictReader(
                 # Correctly decoded for BOM which are produced by the API
@@ -180,25 +176,22 @@ class MicrosoftGraphClient:
             headers['User-Agent'] = self.config['user_agent']
 
         if method == "GET":
-            LOGGER.info(
-                "Making {} request to {} with params: {}".format(method, url, params))
+            LOGGER.info("Making %s request to %s with params: %s", method, url, params)
             response = self.session.get(url, headers=headers, allow_redirects=True)
         elif method == "POST":
-            LOGGER.info("Making {} request to {} with body {}".format(method, url, data))
+            LOGGER.info("Making %s request to %s with body %s", method, url, data)
             response = self.session.post(url, data=data)
         else:
             raise Exception("Unsupported HTTP method")
 
-        LOGGER.info("Received code: {}".format(response.status_code))
+        LOGGER.info("Received code: %s", response.status_code)
 
         if response.status_code == 401:
             LOGGER.info(
-                "Received unauthorized error code, retrying: {}".format(
-                    response.text))
+                "Received unauthorized error code, retrying: %s", response.text)
             self.login()
         elif response.status_code == 429:
-            LOGGER.info("Received rate limit response: {}".format(
-                response.headers))
+            LOGGER.info("Received rate limit response: %s", response.headers)
             retry_after = int(response.headers.get('Retry-After'))
             time.sleep(retry_after)
             raise Server42xRateLimitError()

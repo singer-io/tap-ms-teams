@@ -13,6 +13,11 @@ jobs:
             pip install -U 'pip<19.2' setuptools
             pip install .[dev]
       - add_ssh_keys
+      - run:
+          name: 'Pylint'
+          command: |
+            source /usr/local/share/virtualenvs/tap-ms-teams/bin/activate
+            make test
       # - run:
       #     name: 'Integration Tests'
       #     command: |
