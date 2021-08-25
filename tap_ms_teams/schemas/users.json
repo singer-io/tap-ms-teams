@@ -15,6 +15,9 @@
                 }
               ]
         },
+        "department": {
+            "type": ["null", "string"]
+        },
         "display_name": {
             "type": ["null", "string"]
         },
@@ -40,6 +43,9 @@
             "type": ["null", "string"]
         },
         "user_principal_name": {
+            "type": ["null", "string"]
+        },
+        "employee_id": {
             "type": ["null", "string"]
         },
         "id": {

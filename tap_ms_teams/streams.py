@@ -9,7 +9,7 @@ from tap_ms_teams.client import GraphVersion
 from tap_ms_teams.transform import transform
 
 LOGGER = singer.get_logger()
-TOP_API_PARAM_DEFAULT = 100
+TOP_API_PARAM_DEFAULT = 999
 
 
 class GraphStream:
@@ -117,6 +117,9 @@ class GraphStream:
 
 
 class Users(GraphStream):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.select = self.generate_select(self.load_schema())
     name = 'users'
     version = GraphVersion.V1.value
     key_properties = ['id']
@@ -126,6 +129,22 @@ class Users(GraphStream):
     valid_replication_keys = []
     date_fields = []
     orderby = 'displayName'
+    def generate_select(self, schema):
+        #All fields need to be comma delimited in the select paramater
+        #Had to covert from snake case to camel case as that's the convention chosen by this tap
+        things_to_select = []
+        for key in schema["properties"].keys():
+            things_to_select.append(humps.camelize(key))
+        return ",".join(things_to_select)
+    
+    def sync(self, client, startdate=None):
+        resources = client.get_all_resources(self.version,
+                                             self.endpoint,
+                                             top=self.top,
+                                             orderby=self.orderby,
+                                             select_param=self.select)
+
+        yield humps.decamelize(resources)
 
 
 class Groups(GraphStream):
