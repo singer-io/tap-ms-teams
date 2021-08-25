@@ -2,6 +2,9 @@
     "type": ["null", "object"],
     "additionalProperties": true,
     "properties": {
+        "account_enabled": {
+            "type": ["null", "boolean"]
+        },
         "business_phones": {
             "anyOf": [
                 {
@@ -15,16 +18,52 @@
                 }
               ]
         },
+        "city": {
+            "type": ["null", "string"]
+        },
+        "company_name": {
+            "type": ["null", "string"]
+        },
+        "country": {
+            "type": ["null", "string"]
+        },
+        "created_date_time": {
+            "type": ["null", "string"]
+        },
+        "creation_type": {
+            "type": ["null", "string"]
+        },
+        "department": {
+            "type": ["null", "string"]
+        },
         "display_name": {
+            "type": ["null", "string"]
+        },
+        "employee_id": {
+            "type": ["null", "string"]
+        },
+        "employee_type": {
+            "type": ["null", "string"]
+        },
+        "fax_number": {
             "type": ["null", "string"]
         },
         "given_name": {
             "type": ["null", "string"]
         },
+        "is_resource_account": {
+            "type": ["null", "boolean"]
+        },
         "job_title": {
             "type": ["null", "string"]
         },
+        "last_password_change_date_time": {
+            "type": ["null", "string"]
+        },
         "mail": {
+            "type": ["null", "string"]
+        },
+        "mail_nickname": {
             "type": ["null", "string"]
         },
         "mobile_phone": {
@@ -33,13 +72,87 @@
         "office_location": {
             "type": ["null", "string"]
         },
+        "on_premises_distinguished_name": {
+            "type": ["null", "string"]
+        },
+        "on_premises_domain_name": {
+            "type": ["null", "string"]
+        },
+        "on_premises_immutable_id": {
+            "type": ["null", "string"]
+        },
+        "on_premises_last_sync_date_time": {
+            "type": ["null", "string"]
+        },
+        "on_premises_sam_account_name": {
+            "type": ["null", "string"]
+        },
+        "on_premises_security_identifier": {
+            "type": ["null", "string"]
+        },
+        "on_premises_sync_enabled": {
+            "type": ["null", "boolean"]
+        },
+        "on_premises_user_principal_name": {
+            "type": ["null", "boolean"]
+        },
+        "other_mails": {
+            "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+        },
+        "password_policies": {
+            "type": ["null", "string"]
+        },
+        "postal_code": {
+            "type": ["null", "string"]
+        },
         "preferred_language": {
+            "type": ["null", "string"]
+        },
+        "proxy_addresses": {
+            "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+        },
+        "show_in_address_list": {
+            "type": ["null", "boolean"]
+        },
+        "sign_in_sessions_valid_from_date_time": {
+            "type": ["null", "string"]
+        },
+        "state": {
+            "type": ["null", "string"]
+        },
+        "street_address": {
             "type": ["null", "string"]
         },
         "surname": {
             "type": ["null", "string"]
         },
+        "usage_location": {
+            "type": ["null", "string"]
+        },
         "user_principal_name": {
+            "type": ["null", "string"]
+        },
+        "user_type": {
             "type": ["null", "string"]
         },
         "id": {
