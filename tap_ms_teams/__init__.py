@@ -19,6 +19,7 @@ def discover(client):
     ]
     catalog = generate_catalog(streams)
     json.dump(catalog, sys.stdout, indent=2)
+    LOGGER.info('Finished Discovery..')
 
 
 def sync(client, config, catalog, state):
