@@ -18,7 +18,7 @@
             "type": ["null", "string"],
             "format": "date-time"
         },
-        "lastModified_date_time": {
+        "last_modified_date_time": {
             "type": ["null", "string"],
             "format": "date-time"
         },
