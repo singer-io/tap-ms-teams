@@ -12,7 +12,7 @@ setup(name='tap-ms-teams',
           'singer-python==6.3.0',
           'backoff==2.2.1',
           'requests==2.32.5',
-          'urllib3>=2.0,<3.0',
+          'urllib3>=2.6.2',
           'pyhumps==3.8.0'
       ],
       extras_require={
