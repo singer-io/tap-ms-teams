@@ -63,8 +63,8 @@ class GraphStream:
             del self.state['currently_syncing']
         else:
             singer.set_currently_syncing(self.state, stream_name)
-        if stream_name:
-            LOGGER.info('Stream: %s - Currently Syncing', stream_name)
+        singer.write_state(self.state)
+        LOGGER.info('Stream: %s - Currently Syncing', stream_name)
 
     # Returns max key and date time for all replication key data in record
     def max_from_replication_dates(self, record):
