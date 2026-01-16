@@ -16,6 +16,12 @@
         },
         "web_url":{
             "type": ["null", "string"]
+        },
+        "membership_type": {
+            "type": ["null", "string"]
+        },
+        "is_archived": {
+            "type": ["null", "boolean"]
         }
     }
 }

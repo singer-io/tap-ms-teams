@@ -130,7 +130,7 @@ class Users(GraphStream):
 
 class Groups(GraphStream):
     name = 'groups'
-    version = GraphVersion.BETA.value
+    version = GraphVersion.V1.value
     key_properties = ['id']
     replication_method = 'FULL_TABLE'
     replication_key = None
@@ -255,11 +255,11 @@ class Channels(GraphStream):
 
 class ChannelMembers(GraphStream):
     name = 'channel_members'
-    version = GraphVersion.BETA.value
-    key_properties = ['id']
+    version = GraphVersion.V1.value
+    key_properties = ['id', 'group_id', 'channel_id']
     replication_method = 'FULL_TABLE'
     replication_key = None
-    endpoint = 'chats/{channel_id}/members'
+    endpoint = 'teams/{group_id}/channels/{channel_id}/members'
     valid_replication_keys = []
     date_fields = []
     orderby = 'displayName'
@@ -274,15 +274,16 @@ class ChannelMembers(GraphStream):
                     client, group_id):
                 channel_id = channel.get('id')
 
-                for member in self.get_channel_members(client, channel_id):
-                    member['channel_id'] = channel.get('id')
+                for member in self.get_channel_members(client, group_id, channel_id):
+                    member["group_id"] = group_id
+                    member['channel_id'] = channel_id
                     result.append(member)
 
         yield humps.decamelize(result)
 
-    def get_channel_members(self, client, channel_id):
+    def get_channel_members(self, client, group_id, channel_id):
         return client.get_all_resources(
-            self.version, self.endpoint.format(channel_id=channel_id))
+            self.version, self.endpoint.format(group_id=group_id, channel_id=channel_id))
 
 
 class ChannelTabs(GraphStream):
@@ -513,7 +514,8 @@ class ConversationPosts(GraphStream):
 
 class TeamDeviceUsageReport(GraphStream):
     name = 'team_device_usage_report'
-    version = GraphVersion.BETA.value
+    # version = GraphVersion.BETA.value
+    version = GraphVersion.V1.value
     key_properties = ['user_principal_name', 'report_refresh_date']
     replication_method = 'INCREMENTAL'
     replication_key = 'report_refresh_date'
@@ -538,18 +540,18 @@ class TeamDeviceUsageReport(GraphStream):
 
 
 AVAILABLE_STREAMS = {
-    "users": Users,
+    "users": Users, #
     "groups": Groups,
-    "group_members": GroupMembers,
-    "group_owners": GroupOwners,
-    "channels": Channels,
+    "group_members": GroupMembers, #
+    "group_owners": GroupOwners, #
+    "channels": Channels, #
     "channel_members": ChannelMembers,
-    "channel_tabs": ChannelTabs,
+    "channel_tabs": ChannelTabs, #
     "channel_messages": ChannelMessages,
     "channel_message_replies": ChannelMessageReplies,
-    "conversations": Conversations,
-    "conversation_threads": ConversationThreads,
-    "conversation_posts": ConversationPosts,
-    "team_drives": TeamDrives,
+    "conversations": Conversations, #
+    "conversation_threads": ConversationThreads, #
+    "conversation_posts": ConversationPosts, #
+    "team_drives": TeamDrives, #
     "team_device_usage_report": TeamDeviceUsageReport
 }

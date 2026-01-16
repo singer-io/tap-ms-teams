@@ -67,7 +67,7 @@ class MsTeamsBaseTest(BaseCase):
                 cls.API_LIMIT: 100
             },
             "channel_members": {
-                cls.PRIMARY_KEYS: {"id"},
+                cls.PRIMARY_KEYS: {"id", "group_id", "channel_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,

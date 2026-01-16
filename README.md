@@ -11,13 +11,13 @@ This tap:
 
 - Pulls raw data from the [Microsoft Graph API](https://docs.microsoft.com/en-us/graph/)
 - Extracts the following resources:
-  - [users](https://docs.microsoft.com/en-us/graph/api/user-list?view=graph-rest-beta&tabs=http)
-  - [groups](https://docs.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi%2Fbeta&view=graph-rest-beta)
+  - [users](https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0&tabs=http)
+  - [groups](https://learn.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi&view=graph-rest-1.0)
   - [group_members](https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http)
   - [group_owners](https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http)
   - [channels](https://docs.microsoft.com/en-us/graph/api/channel-list?view=graph-rest-1.0&tabs=http)
-  - [channel_members](https://docs.microsoft.com/en-us/graph/api/conversationmember-list?view=graph-rest-beta&tabs=http)
-  - [channel_tabs](https://docs.microsoft.com/en-us/graph/api/teamstab-list?view=graph-rest-beta)
+  - [channel_members](https://learn.microsoft.com/en-us/graph/api/channel-list-members?view=graph-rest-1.0&tabs=http)
+  - [channel_tabs](https://learn.microsoft.com/en-us/graph/api/channel-list-tabs?view=graph-rest-1.0&tabs=http)
   - [channel_messages](https://docs.microsoft.com/en-us/graph/api/chatmessage-delta?view=graph-rest-beta&tabs=http)
   - [channel_message_replies](https://docs.microsoft.com/en-us/graph/api/channel-list-messagereplies?view=graph-rest-beta&tabs=http)
   - [conversations](https://docs.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-beta&tabs=http)
@@ -30,12 +30,12 @@ This tap:
 
 ## Streams
 
-- [users](https://docs.microsoft.com/en-us/graph/api/user-list?view=graph-rest-beta&tabs=http)
+- [users](https://learn.microsoft.com/en-us/graph/api/user-list?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
-- [groups](https://docs.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi%2Fbeta&view=graph-rest-beta)
+- [groups](https://learn.microsoft.com/en-us/graph/teams-list-all-teams?context=graph%2Fapi&view=graph-rest-1.0)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
@@ -55,12 +55,12 @@ This tap:
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
-- [channel_members](https://docs.microsoft.com/en-us/graph/api/conversationmember-list?view=graph-rest-beta&tabs=http)
+- [channel_members](https://learn.microsoft.com/en-us/graph/api/channel-list-members?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
-- [channel_tabs](https://docs.microsoft.com/en-us/graph/api/teamstab-list?view=graph-rest-beta)
+- [channel_tabs](https://learn.microsoft.com/en-us/graph/api/channel-list-tabs?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Full Table
