@@ -182,7 +182,7 @@ class GroupMembers(GraphStream):
 class GroupOwners(GraphStream):
     name = 'group_owners'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'group_id']
     replication_method = 'FULL_TABLE'
     replication_key = None
     endpoint = 'groups/{group_id}/owners'
@@ -208,7 +208,7 @@ class GroupOwners(GraphStream):
 class TeamDrives(GraphStream):
     name = 'team_drives'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'group_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'last_modified_date_time'
     endpoint = 'groups/{group_id}/drives'
@@ -219,9 +219,12 @@ class TeamDrives(GraphStream):
     def sync(self, client, startdate=None):
         owners_result = []
         for group in Groups().get_all_groups(client):
+            group_id = group.get('id')
             resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group.get('id')))
+                self.version, self.endpoint.format(group_id=group_id))
 
+            for resource in resources:
+                resource["group_id"] = group_id
             transformed_resources = humps.decamelize(resources)
             owners_result.extend(transformed_resources)
         yield owners_result
@@ -230,7 +233,7 @@ class TeamDrives(GraphStream):
 class Channels(GraphStream):
     name = 'channels'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', "group_id"]
     replication_method = 'FULL_TABLE'
     replication_key = None
     endpoint = 'teams/{group_id}/channels'
@@ -241,9 +244,11 @@ class Channels(GraphStream):
     def sync(self, client, startdate=None):
         channels_result = []
         for group in Groups().get_all_groups(client):
+            group_id = group.get('id')
             resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group.get('id')))
-
+                self.version, self.endpoint.format(group_id=group_id))
+            for resource in resources:
+                resource['group_id'] = group_id
             transformed_resources = humps.decamelize(resources)
             channels_result.extend(transformed_resources)
             yield channels_result
@@ -289,7 +294,7 @@ class ChannelMembers(GraphStream):
 class ChannelTabs(GraphStream):
     name = 'channel_tabs'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'group_id', 'channel_id']
     replication_method = 'FULL_TABLE'
     replication_key = None
     endpoint = 'teams/{group_id}/channels/{channel_id}/tabs'
@@ -320,8 +325,8 @@ class ChannelTabs(GraphStream):
 
 class ChannelMessages(GraphStream):
     name = 'channel_messages'
-    version = GraphVersion.BETA.value
-    key_properties = ['id']
+    version = GraphVersion.V1.value
+    key_properties = ['id', 'group_id', 'channel_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'last_modified_date_time'
     endpoint = 'teams/{group_id}/channels/{channel_id}/messages/delta'
@@ -341,17 +346,22 @@ class ChannelMessages(GraphStream):
     def sync(self, client, startdate=None):
         result = []
         for group in Groups().get_all_groups(client):
-
+            group_id = group.get('id')
             channels = client.get_all_resources(
                 Channels.version,
-                Channels.endpoint.format(group_id=group.get('id')))
+                Channels.endpoint.format(group_id=group_id))
 
             for channel in channels:
+                channel_id = channel.get('id')
                 channel_messages = self.get_messages_for_group_channel(
                     client,
-                    group_id=group.get('id'),
-                    channel_id=channel.get('id'),
+                    group_id=group_id,
+                    channel_id=channel_id,
                     startdate=startdate)
+
+                for channel_message in channel_messages:
+                    channel_message["group_id"] = group_id
+                    channel_message["channel_id"] = channel_id
 
                 transformed_channel_messages = humps.decamelize(
                     channel_messages)
@@ -372,8 +382,8 @@ class ChannelMessages(GraphStream):
 
 class ChannelMessageReplies(GraphStream):
     name = 'channel_message_replies'
-    version = GraphVersion.BETA.value
-    key_properties = ['id']
+    version = GraphVersion.V1.value
+    key_properties = ['id', 'group_id', 'channel_id', 'message_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'created_date_time'
     endpoint = 'teams/{group_id}/channels/{channel_id}/messages/{message_id}/replies'
@@ -406,6 +416,12 @@ class ChannelMessageReplies(GraphStream):
                         self.endpoint.format(group_id=group_id,
                                              channel_id=channel_id,
                                              message_id=message_id))
+
+                    for reply in replies:
+                        reply["group_id"] = group_id
+                        reply["channel_id"] = channel_id
+                        reply["message_id"] = message_id
+
                     results.extend(replies)
 
         yield humps.decamelize(results)
@@ -414,7 +430,7 @@ class ChannelMessageReplies(GraphStream):
 class Conversations(GraphStream):
     name = 'conversations'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'group_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'last_delivered_date_time'
     endpoint = 'groups/{group_id}/conversations'
@@ -442,7 +458,7 @@ class Conversations(GraphStream):
 class ConversationThreads(GraphStream):
     name = 'conversation_threads'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'conversation_id', 'group_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'last_delivered_date_time'
     endpoint = 'groups/{group_id}/conversations/{conversation_id}/threads'
@@ -476,7 +492,7 @@ class ConversationThreads(GraphStream):
 class ConversationPosts(GraphStream):
     name = 'conversation_posts'
     version = GraphVersion.V1.value
-    key_properties = ['id', 'change_key']
+    key_properties = ['id', 'change_key', 'group_id', 'conversation_id', 'thread_id']
     replication_method = 'INCREMENTAL'
     replication_key = 'last_modified_date_time'
     endpoint = 'groups/{group_id}/conversations/{conversation_id}/threads/{thread_id}/posts'
@@ -514,7 +530,6 @@ class ConversationPosts(GraphStream):
 
 class TeamDeviceUsageReport(GraphStream):
     name = 'team_device_usage_report'
-    # version = GraphVersion.BETA.value
     version = GraphVersion.V1.value
     key_properties = ['user_principal_name', 'report_refresh_date']
     replication_method = 'INCREMENTAL'
@@ -534,8 +549,9 @@ class TeamDeviceUsageReport(GraphStream):
             report_date_str = window_start.strftime("%Y-%m-%d")
             for page in self.client.get_report(
                     self.version, self.endpoint.format(date=report_date_str)):
-                transformed = transform(page)
-                yield humps.decamelize(transformed)
+                hump_data = humps.decamelize(page)
+                transformed = transform(hump_data)
+                yield transformed
             window_start = window_start + timedelta(days=self.DATE_WINDOW_SIZE)
 
 

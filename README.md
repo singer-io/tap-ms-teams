@@ -18,13 +18,13 @@ This tap:
   - [channels](https://docs.microsoft.com/en-us/graph/api/channel-list?view=graph-rest-1.0&tabs=http)
   - [channel_members](https://learn.microsoft.com/en-us/graph/api/channel-list-members?view=graph-rest-1.0&tabs=http)
   - [channel_tabs](https://learn.microsoft.com/en-us/graph/api/channel-list-tabs?view=graph-rest-1.0&tabs=http)
-  - [channel_messages](https://docs.microsoft.com/en-us/graph/api/chatmessage-delta?view=graph-rest-beta&tabs=http)
-  - [channel_message_replies](https://docs.microsoft.com/en-us/graph/api/channel-list-messagereplies?view=graph-rest-beta&tabs=http)
-  - [conversations](https://docs.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-beta&tabs=http)
-  - [conversation_threads](https://docs.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-beta&tabs=http)
-  - [conversation_posts](https://docs.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-beta&tabs=http)
-  - [team_drives](https://docs.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-beta&tabs=http#get-the-document-library-associated-with-a-group)
-  - [team_device_usage_report](https://docs.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-beta)
+  - [channel_messages](https://learn.microsoft.com/en-us/graph/api/channel-list-messages?view=graph-rest-1.0&tabs=http)
+  - [channel_message_replies](https://learn.microsoft.com/en-us/graph/api/chatmessage-list-replies?view=graph-rest-1.0&tabs=http)
+  - [conversations](https://learn.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-1.0&tabs=http)
+  - [conversation_threads](https://learn.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-1.0&tabs=http)
+  - [conversation_posts](https://learn.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-1.0&tabs=http)
+  - [team_drives](https://learn.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-1.0&tabs=http#get-the-document-library-associated-with-a-group)
+  - [team_device_usage_report](https://learn.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-1.0&tabs=http)
 - Outputs the schema for each resource
 - Incrementally pulls data based on the input state
 
@@ -65,43 +65,43 @@ This tap:
   - Primary keys: id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
-- [channel_messages](https://docs.microsoft.com/en-us/graph/api/chatmessage-delta?view=graph-rest-beta&tabs=http)
+- [channel_messages](https://learn.microsoft.com/en-us/graph/api/channel-list-messages?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
   - Transformations: camelCase to snake_case
-- [channel_message_replies](https://docs.microsoft.com/en-us/graph/api/channel-list-messagereplies?view=graph-rest-beta&tabs=http)
+- [channel_message_replies](https://learn.microsoft.com/en-us/graph/api/chatmessage-list-replies?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
   - Transformations: camelCase to snake_case
-- [conversations](https://docs.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-beta&tabs=http)
+- [conversations](https://learn.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
-- [conversation_threads](https://docs.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-beta&tabs=http)
+- [conversation_threads](https://learn.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
-- [conversation_posts](https://docs.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-beta&tabs=http)
+- [conversation_posts](https://learn.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-1.0&tabs=http)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastDeliveredDateTime
   - Transformations: camelCase to snake_case
-- [team_drives](https://docs.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-beta&tabs=http#get-the-document-library-associated-with-a-group)
+- [team_drives](https://learn.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-1.0&tabs=http#get-the-document-library-associated-with-a-group)
   - Data key: value
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: lastModifiedDateTime
   - Transformations: camelCase to snake_case
-- [team_device_usage_report](https://docs.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-beta)
+- [team_device_usage_report](https://learn.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-1.0&tabs=http)
   - Primary keys: id
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: report_refresh_date
@@ -161,7 +161,6 @@ The Microsoft Graph API uses OAuth for authentication. Follow these instructions
     10. Team > Team.ReadBasic.All
     11. User > User.Read.All
 16. Click Add permissions
-    
 
 ## Quick Start
 

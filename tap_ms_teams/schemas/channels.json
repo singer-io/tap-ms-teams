@@ -5,11 +5,17 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "display_name": {
             "type": ["null", "string"]
         },
         "description": {
             "type": ["null", "string"]
+        },
+        "is_favorite_by_default": {
+            "type": ["null", "boolean"]
         },
         "email":{
             "type": ["null", "string"]

@@ -5,6 +5,12 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
+        "channel_id": {
+            "type": ["null", "string"]
+        },
         "reply_to_id": {
             "type": ["null", "string"]
         },
@@ -93,7 +99,7 @@
             "type": ["null", "object"],
             "additionalProperties": true,
             "properties": {
-                "teamId": {
+                "team_id": {
                     "type": ["null", "string"]
                 },
                 "channel_id": {
@@ -170,7 +176,7 @@
                                             "display_name": {
                                                 "type": ["null", "string"]
                                             },
-                                            "userIdentity_type": {
+                                            "user_identity_type": {
                                                 "type": ["null", "string"]
                                             }
                                         }

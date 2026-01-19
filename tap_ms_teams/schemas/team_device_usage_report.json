@@ -35,6 +35,15 @@
         "used_windows": {
             "type": ["null", "string"]
         },
+        "used_chrome_os": {
+            "type": ["null", "string"]
+        },
+        "used_linux": {
+            "type": ["null", "string"]
+        },
+        "is_licensed": {
+            "type": ["null", "string"]
+        },
         "report_period": {
             "type": ["null", "string"]
         }
