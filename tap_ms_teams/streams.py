@@ -41,18 +41,25 @@ class GraphStream:
     def write_state(self):
         return singer.write_state(self.state)
 
-    def update_bookmark(self, stream, value):
+    def update_bookmark(self, stream, replication_key, value):
         if 'bookmarks' not in self.state:
             self.state['bookmarks'] = {}
-        self.state['bookmarks'][stream] = value
+        if stream not in self.state['bookmarks']:
+            self.state['bookmarks'][stream] = {}
+        current_bookmark = self.get_bookmark(stream, replication_key, self.config["start_date"])
+        value = max(current_bookmark, value)
+        self.state['bookmarks'][stream][replication_key] = value
         LOGGER.info('Stream: %s - Write state, bookmark value: %s', stream, value)
         self.write_state()
 
-    def get_bookmark(self, stream, default):
+    def get_bookmark(self, stream, replication_key, default):
         # default only populated on initial sync
-        if (self.state is None) or ('bookmarks' not in self.state):
+        if (self.state is None) or \
+            ('bookmarks' not in self.state) or \
+            (stream not in self.state['bookmarks']) or\
+            (replication_key not in self.state['bookmarks'][stream]):
             return default
-        return self.state.get('bookmarks', {}).get(stream, default)
+        return self.state.get('bookmarks', {}).get(stream, {}).get(replication_key, default)
 
     # Currently syncing sets the stream currently being delivered in the state.
     # If the integration is interrupted, this state property is used to identify
@@ -68,12 +75,32 @@ class GraphStream:
 
     # Returns max key and date time for all replication key data in record
     def max_from_replication_dates(self, record):
-        date_times = {
-            dt: strptime_to_utc(record[dt])
-            for dt in self.valid_replication_keys if record[dt] is not None
-        }
-        max_key = max(date_times)
-        return date_times[max_key]
+        # Collect parsed datetimes for all valid replication keys (if present)
+        candidates = []
+        for dt in getattr(self, 'valid_replication_keys', []):
+            raw = record.get(dt)
+            if not raw:
+                continue
+            try:
+                candidates.append(strptime_to_utc(raw))
+            except Exception:
+                # Skip values that fail to parse
+                continue
+
+        # Fallback: if no valid_replication_keys present, try the primary replication_key
+        if not candidates and getattr(self, 'replication_key', None):
+            raw = record.get(self.replication_key)
+            if raw:
+                try:
+                    candidates.append(strptime_to_utc(raw))
+                except Exception:
+                    pass
+
+        if not candidates:
+            return None
+
+        # Return the latest datetime value (max of candidate datetimes)
+        return max(candidates)
 
     def remove_hours_local(self, dttm): # pylint: disable = no-self-use
         new_dttm = dttm.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -251,7 +278,7 @@ class Channels(GraphStream):
                 resource['group_id'] = group_id
             transformed_resources = humps.decamelize(resources)
             channels_result.extend(transformed_resources)
-            yield channels_result
+        yield channels_result
 
     def get_all_channels_for_group(self, client, group_id):
         return client.get_all_resources(
@@ -330,18 +357,10 @@ class ChannelMessages(GraphStream):
     replication_method = 'INCREMENTAL'
     replication_key = 'last_modified_date_time'
     endpoint = 'teams/{group_id}/channels/{channel_id}/messages/delta'
-    valid_replication_keys = [
-        'last_modified_date_time', 'created_date_time', 'deleted_date_time'
-    ]
+    valid_replication_keys = ['last_modified_date_time']
     date_fields = []
     orderby = 'displayName'
     filter_param = '{replication_key} gt {startdate}'
-
-    def get_bookmark(self, stream, default):
-        # default only populated on initial sync
-        if (self.state is None) or ('bookmarks' not in self.state):
-            return default
-        return self.state.get('bookmarks', {}).get(stream, default)
 
     def sync(self, client, startdate=None):
         result = []
@@ -387,9 +406,7 @@ class ChannelMessageReplies(GraphStream):
     replication_method = 'INCREMENTAL'
     replication_key = 'created_date_time'
     endpoint = 'teams/{group_id}/channels/{channel_id}/messages/{message_id}/replies'
-    valid_replication_keys = [
-        'created_date_time', 'last_modified_date_time', 'deleted_date_time'
-    ]
+    valid_replication_keys = ['created_date_time']
     date_fields = []
     orderby = None
 
@@ -496,7 +513,7 @@ class ConversationPosts(GraphStream):
     replication_method = 'INCREMENTAL'
     replication_key = 'last_modified_date_time'
     endpoint = 'groups/{group_id}/conversations/{conversation_id}/threads/{thread_id}/posts'
-    valid_replication_keys = ['last_modified_date_time', 'received_date_time']
+    valid_replication_keys = ['last_modified_date_time']
     date_fields = []
     orderby = 'displayName'
 
@@ -550,24 +567,28 @@ class TeamDeviceUsageReport(GraphStream):
             for page in self.client.get_report(
                     self.version, self.endpoint.format(date=report_date_str)):
                 hump_data = humps.decamelize(page)
+                # Fix humps incorrectly converting "Used iOS" to "usedi_os" instead of "used_ios"
+                for record in hump_data:
+                    if 'usedi_os' in record:
+                        record['used_ios'] = record.pop('usedi_os')
                 transformed = transform(hump_data)
                 yield transformed
             window_start = window_start + timedelta(days=self.DATE_WINDOW_SIZE)
 
 
 AVAILABLE_STREAMS = {
-    "users": Users, #
+    "users": Users,
     "groups": Groups,
-    "group_members": GroupMembers, #
-    "group_owners": GroupOwners, #
-    "channels": Channels, #
+    "group_members": GroupMembers,
+    "group_owners": GroupOwners,
+    "channels": Channels,
     "channel_members": ChannelMembers,
-    "channel_tabs": ChannelTabs, #
+    "channel_tabs": ChannelTabs,
     "channel_messages": ChannelMessages,
     "channel_message_replies": ChannelMessageReplies,
-    "conversations": Conversations, #
-    "conversation_threads": ConversationThreads, #
-    "conversation_posts": ConversationPosts, #
-    "team_drives": TeamDrives, #
+    "conversations": Conversations,
+    "conversation_threads": ConversationThreads,
+    "conversation_posts": ConversationPosts,
+    "team_drives": TeamDrives,
     "team_device_usage_report": TeamDeviceUsageReport
 }

@@ -23,7 +23,7 @@
         "used_windows_phone": {
             "type": ["null", "string"]
         },
-        "used_i_os": {
+        "used_ios": {
             "type": ["null", "string"]
         },
         "used_mac": {

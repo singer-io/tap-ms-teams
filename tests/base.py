@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from tap_tester.base_suite_tests.base_case import BaseCase
 
 
@@ -29,98 +30,98 @@ class MsTeamsBaseTest(BaseCase):
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 1
             },
             "groups": {
                 cls.PRIMARY_KEYS: {"id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "group_members": {
                 cls.PRIMARY_KEYS: {"id", "group_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "group_owners": {
                 cls.PRIMARY_KEYS: {"id", "group_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "team_drives": {
                 cls.PRIMARY_KEYS: {"id", "group_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
                 cls.REPLICATION_KEYS: {"last_modified_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "channels": {
                 cls.PRIMARY_KEYS: {"id", "group_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 3
             },
             "channel_members": {
                 cls.PRIMARY_KEYS: {"id", "group_id", "channel_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 4
             },
             "channel_tabs": {
                 cls.PRIMARY_KEYS: {"id", "group_id", "channel_id"},
                 cls.REPLICATION_METHOD: cls.FULL_TABLE,
                 cls.REPLICATION_KEYS: set(),
                 cls.OBEYS_START_DATE: False,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 5
             },
             "channel_messages": {
                 cls.PRIMARY_KEYS: {"id", "group_id", "channel_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
-                cls.REPLICATION_KEYS: {"last_modified_date_time", "created_date_time", "deleted_date_time"},
+                cls.REPLICATION_KEYS: {"last_modified_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 7
             },
             "channel_message_replies": {
                 cls.PRIMARY_KEYS: {"id", "group_id", "channel_id", "message_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
-                cls.REPLICATION_KEYS: {"created_date_time", "last_modified_date_time", "deleted_date_time"},
+                cls.REPLICATION_KEYS: {"created_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "conversations": {
                 cls.PRIMARY_KEYS: {"id", "group_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
                 cls.REPLICATION_KEYS: {"last_delivered_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "conversation_threads": {
                 cls.PRIMARY_KEYS: {"id", "group_id", "conversation_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
                 cls.REPLICATION_KEYS: {"last_delivered_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "conversation_posts": {
                 cls.PRIMARY_KEYS: {"id", "change_key", "thread_id", "conversation_id", "group_id"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
-                cls.REPLICATION_KEYS: {"last_modified_date_time", "received_date_time"},
+                cls.REPLICATION_KEYS: {"last_modified_date_time"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             },
             "team_device_usage_report": {
                 cls.PRIMARY_KEYS: {"user_principal_name", "report_refresh_date"},
                 cls.REPLICATION_METHOD: cls.INCREMENTAL,
                 cls.REPLICATION_KEYS: {"report_refresh_date"},
                 cls.OBEYS_START_DATE: True,
-                cls.API_LIMIT: 100
+                cls.API_LIMIT: 2
             }
         }
 
@@ -142,7 +143,7 @@ class MsTeamsBaseTest(BaseCase):
     def get_properties(self, original: bool = True):
         """Configuration of properties required for the tap."""
         return_value = {
-            "start_date": "2025-01-01T00:00:00Z",
+            "start_date": "2026-01-01T00:00:00Z",
             "user_agent": "tap-ms-teams-test"
         }
         if original:

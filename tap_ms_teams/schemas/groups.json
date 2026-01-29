@@ -68,7 +68,7 @@
         "membership_rule_processing_state": {
             "type": ["null", "string"]
         },
-        "onPremises_domain_name": {
+        "on_premises_domain_name": {
             "type": ["null", "string"]
         },
         "on_premises_last_sync_date_time": {

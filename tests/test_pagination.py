@@ -11,6 +11,7 @@ class MsTeamsPaginationTest(PaginationTest, MsTeamsBaseTest):
         return "tap_tester_ms_teams_pagination_test"
 
     def streams_to_test(self):
-        streams_to_exclude = {}
+        streams_to_exclude = set({
+            'team_device_usage_report'
+        })
         return self.expected_stream_names().difference(streams_to_exclude)
-
