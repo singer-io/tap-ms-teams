@@ -183,7 +183,7 @@ class Groups(GraphStream):
 class GroupMembers(GraphStream):
     name = 'group_members'
     version = GraphVersion.V1.value
-    key_properties = ['id']
+    key_properties = ['id', 'group_id']
     replication_method = 'FULL_TABLE'
     replication_key = None
     endpoint = 'groups/{group_id}/members'
