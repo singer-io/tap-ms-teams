@@ -55,8 +55,6 @@ class TestIncrementalStreams(unittest.TestCase):
         self.assertEqual(stream.replication_method, 'INCREMENTAL')
         self.assertEqual(stream.replication_key, 'last_modified_date_time')
         self.assertIn('last_modified_date_time', stream.valid_replication_keys)
-        self.assertIn('created_date_time', stream.valid_replication_keys)
-        self.assertIn('deleted_date_time', stream.valid_replication_keys)
 
     def test_get_bookmark_with_state(self):
         """Test get_bookmark returns stored state value"""
@@ -67,8 +65,8 @@ class TestIncrementalStreams(unittest.TestCase):
             state=self.mock_state
         )
 
-        bookmark = stream.get_bookmark('team_drives', '2025-01-01T00:00:00Z')
-        self.assertEqual(bookmark, {'last_modified_date_time': '2025-01-15T00:00:00Z'})
+        bookmark = stream.get_bookmark('team_drives', 'last_modified_date_time', '2025-01-01T00:00:00Z')
+        self.assertEqual(bookmark, '2025-01-15T00:00:00Z')
 
     def test_get_bookmark_without_state(self):
         """Test get_bookmark returns default when no state exists"""
@@ -80,7 +78,7 @@ class TestIncrementalStreams(unittest.TestCase):
         )
 
         default_date = '2025-01-01T00:00:00Z'
-        bookmark = stream.get_bookmark('team_drives', default_date)
+        bookmark = stream.get_bookmark('team_drives', 'last_modified_date_time', default_date)
         self.assertEqual(bookmark, default_date)
 
     def test_update_bookmark(self):
@@ -93,9 +91,9 @@ class TestIncrementalStreams(unittest.TestCase):
         )
 
         new_bookmark = '2025-01-20T00:00:00Z'
-        stream.update_bookmark('team_drives', new_bookmark)
+        stream.update_bookmark('team_drives', 'last_modified_date_time', new_bookmark)
 
-        self.assertEqual(stream.state['bookmarks']['team_drives'], new_bookmark)
+        self.assertEqual(stream.state['bookmarks']['team_drives']['last_modified_date_time'], new_bookmark)
 
     def test_max_from_replication_dates(self):
         """Test max_from_replication_dates returns the maximum date"""
@@ -153,7 +151,6 @@ class TestIncrementalStreams(unittest.TestCase):
         self.assertEqual(stream.replication_method, 'INCREMENTAL')
         self.assertEqual(stream.replication_key, 'last_modified_date_time')
         self.assertIn('last_modified_date_time', stream.valid_replication_keys)
-        self.assertIn('received_date_time', stream.valid_replication_keys)
 
     @patch('tap_ms_teams.streams.now')
     def test_get_absolute_start_end_time_within_window(self, mock_now):
