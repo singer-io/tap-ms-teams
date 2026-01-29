@@ -5,6 +5,9 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "last_modified_date_time": {
             "type": ["null", "string"]
         },

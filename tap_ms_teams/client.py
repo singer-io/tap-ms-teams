@@ -179,12 +179,10 @@ class MicrosoftGraphClient:
             LOGGER.info("Making %s request to %s with params: %s", method, url, params)
             response = self.session.get(url, headers=headers, allow_redirects=True)
         elif method == "POST":
-            LOGGER.info("Making %s request to %s with body %s", method, url, data)
+            LOGGER.info("Making %s request to %s", method, url)
             response = self.session.post(url, data=data)
         else:
             raise Exception("Unsupported HTTP method")
-
-        LOGGER.info("Received code: %s", response.status_code)
 
         if response.status_code == 401:
             LOGGER.info(

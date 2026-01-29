@@ -24,31 +24,28 @@ jobs:
             source /usr/local/share/virtualenvs/tap-ms-teams/bin/activate
             uv pip install pylint
             pylint tap_ms_teams -d C,R,W
-      # - run:
-      #     name: "Unit Tests"
-      #     command: |
-      #       source /usr/local/share/virtualenvs/tap-ms-teams/bin/activate
-      #       uv pip install pytest coverage parameterized
-      #       coverage run -m pytest tests/unittests
-      #       coverage html
-      #     when: always
-      # - store_test_results:
-      #     path: test_output/report.xml
-      # - store_artifacts:
-      #     path: htmlcov
-      # - run:
-      #     name: 'Integration Tests'
-      #     command: |
-      #       aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/sandbox dev_env.sh
-      #       source dev_env.sh
-      #       source /usr/local/share/virtualenvs/tap-tester/bin/activate
-      #       run-test --tap=tap-ms-teams \
-      #                  --target=target-stitch \
-      #                  --orchestrator=stitch-orchestrator \
-      #                  --email=harrison+sandboxtest@stitchdata.com \
-      #                  --password=$SANDBOX_PASSWORD \
-      #                  --client-id=50 \
-      #                  tests
+      - run:
+          name: "Unit Tests"
+          command: |
+            source /usr/local/share/virtualenvs/tap-ms-teams/bin/activate
+            uv pip install pytest coverage parameterized
+            coverage run -m pytest tests/unittests
+            coverage html
+          when: always
+      - store_test_results:
+          path: test_output/report.xml
+      - store_artifacts:
+          path: htmlcov
+      - run:
+          name: 'Integration Tests'
+          command: |
+            source /usr/local/share/virtualenvs/tap-tester/bin/activate
+            uv pip install --upgrade awscli
+            aws s3 cp s3://com-stitchdata-dev-deployment-assets/environments/tap-tester/tap_tester_sandbox dev_env.sh
+            source dev_env.sh
+            unset USE_STITCH_BACKEND
+            run-test --tap=tap-ms-teams tests
+
 workflows:
   version: 2
   commit:
