@@ -19,6 +19,7 @@ def discover(client):
     ]
     catalog = generate_catalog(streams)
     json.dump(catalog, sys.stdout, indent=2)
+    LOGGER.info('Finished Discovery..')
 
 
 def sync(client, config, catalog, state):
@@ -45,7 +46,7 @@ def sync(client, config, catalog, state):
             stream.write_schema()
             stream_metadata = metadata.to_map(catalog_entry.metadata)
 
-            bookmark_date = stream.get_bookmark(stream.name,
+            bookmark_date = stream.get_bookmark(stream.name, stream.replication_key,
                                                 config['start_date'])
             bookmark_dttm = strptime_to_utc(bookmark_date)
             max_bookmark_value = None
@@ -72,6 +73,11 @@ def sync(client, config, catalog, state):
 
                             record_timestamp = stream.max_from_replication_dates(
                                 record)
+                            if record_timestamp is None:
+                                LOGGER.info(
+                                    'Stream: %s - record missing replication timestamps, skipping',
+                                    stream.name)
+                                continue
                             if record_timestamp > max_bookmark_dttm:
                                 max_bookmark_value = strftime(record_timestamp)
 
@@ -84,7 +90,7 @@ def sync(client, config, catalog, state):
                                         stream_metadata,
                                     ))
                                 counter.increment()
-                        stream.update_bookmark(stream.name, max_bookmark_value)
+                        stream.update_bookmark(stream.name, stream.replication_key, max_bookmark_value)
                         stream.write_state()
             stream.update_currently_syncing(None)
         stream.write_state()

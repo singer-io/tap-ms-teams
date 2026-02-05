@@ -5,17 +5,29 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "display_name": {
             "type": ["null", "string"]
         },
         "description": {
             "type": ["null", "string"]
         },
+        "is_favorite_by_default": {
+            "type": ["null", "boolean"]
+        },
         "email":{
             "type": ["null", "string"]
         },
         "web_url":{
             "type": ["null", "string"]
+        },
+        "membership_type": {
+            "type": ["null", "string"]
+        },
+        "is_archived": {
+            "type": ["null", "boolean"]
         }
     }
 }
