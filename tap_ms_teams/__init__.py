@@ -74,7 +74,7 @@ def sync(client, config, catalog, state):
                             record_timestamp = stream.max_from_replication_dates(
                                 record)
                             if record_timestamp is None:
-                                LOGGER.info(
+                                LOGGER.warning(
                                     'Stream: %s - record missing replication timestamps, skipping',
                                     stream.name)
                                 continue
@@ -90,6 +90,8 @@ def sync(client, config, catalog, state):
                                         stream_metadata,
                                     ))
                                 counter.increment()
+
+                    if max_bookmark_value is not None:
                         stream.update_bookmark(stream.name, stream.replication_key, max_bookmark_value)
                         stream.write_state()
             stream.update_currently_syncing(None)

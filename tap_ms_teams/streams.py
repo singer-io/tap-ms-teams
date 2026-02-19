@@ -42,15 +42,39 @@ class GraphStream:
         return singer.write_state(self.state)
 
     def update_bookmark(self, stream, replication_key, value):
+        """
+        Update bookmark value using datetime comparison for correctness.
+        Does not write state - caller should call write_state() after updating.
+        """
         if 'bookmarks' not in self.state:
             self.state['bookmarks'] = {}
         if stream not in self.state['bookmarks']:
             self.state['bookmarks'][stream] = {}
+
+        # Get current bookmark
         current_bookmark = self.get_bookmark(stream, replication_key, self.config["start_date"])
-        value = max(current_bookmark, value)
-        self.state['bookmarks'][stream][replication_key] = value
-        LOGGER.info('Stream: %s - Write state, bookmark value: %s', stream, value)
-        self.write_state()
+
+        # Determine the new bookmark value, handling None and comparing timestamps
+        if value is None:
+            new_value = current_bookmark
+        else:
+            try:
+                current_dt = strptime_to_utc(current_bookmark) if current_bookmark is not None else None
+                value_dt = strptime_to_utc(value)
+            except Exception:
+                # Fallback to string comparison if parsing fails, guarding against None
+                if current_bookmark is None:
+                    new_value = value
+                else:
+                    new_value = max(current_bookmark, value)
+            else:
+                if current_dt is None or value_dt >= current_dt:
+                    new_value = value
+                else:
+                    new_value = current_bookmark
+
+        self.state['bookmarks'][stream][replication_key] = new_value
+        LOGGER.info('Stream: %s - Write state, bookmark value: %s', stream, new_value)
 
     def get_bookmark(self, stream, replication_key, default):
         # default only populated on initial sync

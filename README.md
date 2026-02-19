@@ -42,67 +42,67 @@ This tap:
   - Transformations: camelCase to snake_case
 - [group_members](https://docs.microsoft.com/en-us/graph/api/group-list-members?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
 - [group_owners](https://docs.microsoft.com/en-us/graph/api/group-list-owners?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
 - [channels](https://docs.microsoft.com/en-us/graph/api/channel-list?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
 - [channel_members](https://learn.microsoft.com/en-us/graph/api/channel-list-members?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id, channel_id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
 - [channel_tabs](https://learn.microsoft.com/en-us/graph/api/channel-list-tabs?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id, channel_id
   - Replication strategy: Full Table
   - Transformations: camelCase to snake_case
 - [channel_messages](https://learn.microsoft.com/en-us/graph/api/channel-list-messages?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id, channel_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
+  - Bookmark: last_modified_date_time
   - Transformations: camelCase to snake_case
 - [channel_message_replies](https://learn.microsoft.com/en-us/graph/api/chatmessage-list-replies?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id, channel_id, message_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: ucreatedDateTime OR lastModifiedDateTime OR deletedDateTime
+  - Bookmark: created_date_time
   - Transformations: camelCase to snake_case
 - [conversations](https://learn.microsoft.com/en-us/graph/api/group-list-conversations?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: lastDeliveredDateTime
+  - Bookmark: last_delivered_date_time
   - Transformations: camelCase to snake_case
 - [conversation_threads](https://learn.microsoft.com/en-us/graph/api/conversation-list-threads?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, conversation_id, group_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: lastDeliveredDateTime
+  - Bookmark: last_delivered_date_time
   - Transformations: camelCase to snake_case
 - [conversation_posts](https://learn.microsoft.com/en-us/graph/api/conversationthread-list-posts?view=graph-rest-1.0&tabs=http)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, change_key, group_id, conversation_id, thread_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: lastDeliveredDateTime
+  - Bookmark: last_modified_date_time
   - Transformations: camelCase to snake_case
 - [team_drives](https://learn.microsoft.com/en-us/graph/api/drive-get?view=graph-rest-1.0&tabs=http#get-the-document-library-associated-with-a-group)
   - Data key: value
-  - Primary keys: id
+  - Primary keys: id, group_id
   - Replication strategy: Incremental (query all, filter results)
-  - Bookmark: lastModifiedDateTime
+  - Bookmark: last_modified_date_time
   - Transformations: camelCase to snake_case
 - [team_device_usage_report](https://learn.microsoft.com/en-us/graph/api/reportroot-getteamsdeviceusageuserdetail?view=graph-rest-1.0&tabs=http)
-  - Primary keys: id
+  - Primary keys: user_principal_name, report_refresh_date
   - Replication strategy: Incremental (query all, filter results)
   - Bookmark: report_refresh_date
   - Transformations: camelCase to snake_case
@@ -123,7 +123,7 @@ The Microsoft Graph API uses OAuth for authentication. Follow these instructions
    2. Supported account types: Accounts in this organizational directory only
    3. Redirect URL: Web - https://YOURDOMAIN/callback
    4. Register (button)
-6. Record the client_id, tenant_id, and application_id (Object ID) which will be used by the tap for authentication and API integration. 
+6. Record the client_id, tenant_id, and application_id (Object ID) which will be used by the tap for authentication and API integration.
 7. Select Branding
    1. Name: tap-microsoft-teams
    2. Logo: [singer-io-logo.png, 512x512 px]

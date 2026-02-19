@@ -25,8 +25,10 @@ def generate_catalog(streams):
 
         mdata = metadata.to_list(mdata)
 
+        key_properties = metadata.to_map(mdata).get((), {}).get("table-key-properties")
         catalog_entry = {
             'stream': stream.name,
+            'key_properties': key_properties,
             'tap_stream_id': stream.name,
             'schema': schema,
             'metadata': mdata
