@@ -9,19 +9,19 @@ setup(name='tap-ms-teams',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_ms_teams'],
       install_requires=[
-          'singer-python==5.9.0',
-          'backoff==1.8.0',
-          'requests==2.23.0',
-          'pyhumps==1.6.1'
+          'singer-python==6.7.0',
+          'backoff==2.2.1',
+          'requests==2.32.5',
+          'urllib3>=2.6.3',
+          'pyhumps==3.8.0'
       ],
       extras_require={
           'dev': [
               'pylint',
-              'ipdb',
-              'nose',
+              'ipdb'
           ]
       },
-      python_requires='>=3.5.2',
+      python_requires='>=3.9',
       entry_points='''
           [console_scripts]
           tap-ms-teams=tap_ms_teams:main

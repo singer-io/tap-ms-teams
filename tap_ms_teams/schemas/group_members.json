@@ -5,6 +5,9 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "display_name": {
             "type": ["null", "string"]
         },

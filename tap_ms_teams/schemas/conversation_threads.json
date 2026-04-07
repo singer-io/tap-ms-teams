@@ -22,7 +22,16 @@
             "format": "date-time"
         },
         "unique_senders": {
-            "type": ["null", "string"]
+            "anyOf": [{
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                {
+                    "type": "null"
+                }
+            ]
         },
         "preview": {
             "type": ["null", "string"]

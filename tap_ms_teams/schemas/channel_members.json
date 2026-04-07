@@ -28,6 +28,9 @@
         },
         "channel_id": {
             "type": ["null", "string"]
+        },
+        "group_id": {
+            "type": ["null", "string"]
         }
     }
 }

@@ -23,7 +23,7 @@
         "used_windows_phone": {
             "type": ["null", "string"]
         },
-        "used_i_os": {
+        "used_ios": {
             "type": ["null", "string"]
         },
         "used_mac": {
@@ -35,9 +35,17 @@
         "used_windows": {
             "type": ["null", "string"]
         },
+        "used_chrome_os": {
+            "type": ["null", "string"]
+        },
+        "used_linux": {
+            "type": ["null", "string"]
+        },
+        "is_licensed": {
+            "type": ["null", "string"]
+        },
         "report_period": {
             "type": ["null", "string"]
         }
     }
 }
-

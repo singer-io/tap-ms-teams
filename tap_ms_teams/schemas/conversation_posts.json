@@ -5,6 +5,9 @@
         "id": {
             "type": ["null", "string"]
         },
+        "group_id": {
+            "type": ["null", "string"]
+        },
         "thread_id": {
             "type": ["null", "string"]
         },
