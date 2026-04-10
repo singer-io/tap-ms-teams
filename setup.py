@@ -3,7 +3,7 @@
 from setuptools import setup, find_packages
 
 setup(name='tap-ms-teams',
-      version='0.0.2',
+      version='1.0.0',
       description='Singer.io tap for extracting data from the Microsofts Teams Graph API',
       author='scott.coleman@bytecode.io',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
