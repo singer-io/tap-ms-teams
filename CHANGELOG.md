@@ -1,7 +1,7 @@
 # Changelog
 
 ## 1.0.0
-  * Bump versions.[#10](https://github.com/singer-io/tap-ms-teams/pull/10), [#11](https://github.com/singer-io/tap-ms-teams/pull/11)
+  * Bump versions. [#11](https://github.com/singer-io/tap-ms-teams/pull/11), [#10](https://github.com/singer-io/tap-ms-teams/pull/10)
   * Updated schema files, update composite primary key for groups child streams.[#7](https://github.com/singer-io/tap-ms-teams/pull/7)
   * Fixed unit, integration test cases.[#9](https://github.com/singer-io/tap-ms-teams/pull/9)
 
