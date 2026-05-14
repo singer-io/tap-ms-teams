@@ -9,9 +9,9 @@ setup(name='tap-ms-teams',
       classifiers=['Programming Language :: Python :: 3 :: Only'],
       py_modules=['tap_ms_teams'],
       install_requires=[
-          'singer-python==6.7.0',
+          'singer-python==6.8.0',
           'backoff==2.2.1',
-          'requests==2.32.5',
+          'requests==2.33.1',
           'urllib3>=2.6.3',
           'pyhumps==3.8.0'
       ],
