@@ -4,6 +4,7 @@
   * Bump versions singer-python and requests modules. [#11](https://github.com/singer-io/tap-ms-teams/pull/11)
   * Updated schema files, update composite primary key for groups child streams.[#7](https://github.com/singer-io/tap-ms-teams/pull/7)
   * Fixed unit, integration test cases.[#9](https://github.com/singer-io/tap-ms-teams/pull/9)
+  * Add `handle_top_exception` decorator to `main()` for structured error logging. [#12](https://github.com/singer-io/tap-ms-teams/pull/12)
 
 ## 0.0.2
   * Added circle
