@@ -85,7 +85,8 @@ class MicrosoftGraphClient:
                           endpoint,
                           top=None,
                           orderby=None,
-                          filter_param=None):
+                          filter_param=None,
+                          select_param=None):
         args = {}
 
         if top:
@@ -94,6 +95,8 @@ class MicrosoftGraphClient:
             args["$orderby"] = orderby
         if filter_param:
             args["$filter"] = filter_param
+        if select_param:
+            args["$select"] = select_param
 
         next_url = self.build_url(BASE_GRAPH_URL, version, endpoint, args)
 
