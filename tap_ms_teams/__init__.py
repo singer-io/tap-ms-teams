@@ -106,6 +106,7 @@ def main():
     ])
     config = parsed_args.config
 
+    client = None
     try:
         client = MicrosoftGraphClient(parsed_args.config_path, config)
         client.login()

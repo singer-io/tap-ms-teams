@@ -72,10 +72,19 @@ class MicrosoftGraphClient:
             }
 
             with singer.http_request_timer('POST get access token'):
-                result = self.make_request(
-                    method='POST',
-                    url=TOKEN_URL.format(tenant_id=self.tenant_id),
-                    data=body)
+                try:
+                    result = self.make_request(
+                        method='POST',
+                        url=TOKEN_URL.format(tenant_id=self.tenant_id),
+                        data=body)
+                except RuntimeError as e:
+                    # invalid_grant is returned as 400 — token is permanently dead; don't retry
+                    if 'invalid_grant' in str(e):
+                        raise Exception(
+                            'MS Teams refresh_token is expired or revoked. '
+                            'Re-authenticate via Stitch to obtain a new token. '
+                            'Details: {}'.format(str(e)))
+                    raise
 
             self.access_token = result.get('access_token')
             # Microsoft may rotate the refresh_token; keep the latest one in memory
@@ -84,9 +93,12 @@ class MicrosoftGraphClient:
                 self.refresh_token = new_refresh_token
                 self._write_config(new_refresh_token)
 
-        finally:
-            self.login_timer = threading.Timer(TOKEN_EXPIRATION_PERIOD,
-                                               self.login)
+        except Exception:
+            raise
+        else:
+            self.login_timer = threading.Timer(TOKEN_EXPIRATION_PERIOD, self.login)
+            # daemon=True ensures the timer thread does not keep the process alive
+            self.login_timer.daemon = True
             self.login_timer.start()
 
 
