@@ -21,6 +21,9 @@ class MsTeamsInterruptedSyncTest(InterruptedSyncTest, MsTeamsBaseTest):
             'channel_members',
             'groups',
             "team_device_usage_report",
+            # No Teams license assigned in test tenant -> these streams emit 0 records
+            'channel_messages',
+            'channel_message_replies',
         })
         return self.expected_stream_names().difference(streams_to_exclude)
 

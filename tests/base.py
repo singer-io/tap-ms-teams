@@ -132,7 +132,8 @@ class MsTeamsBaseTest(BaseCase):
         creds = {
             'client_id': 'TAP_MS_TEAMS_CLIENT_ID',
             'client_secret': 'TAP_MS_TEAMS_CLIENT_SECRET',
-            'tenant_id': 'TAP_MS_TEAMS_TENANT_ID'
+            'tenant_id': 'TAP_MS_TEAMS_TENANT_ID',
+            'refresh_token': 'TAP_MS_TEAMS_REFRESH_TOKEN'
         }
 
         for cred in creds:
