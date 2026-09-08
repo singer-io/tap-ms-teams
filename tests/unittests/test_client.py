@@ -259,6 +259,34 @@ class TestRefreshTokenRotation(unittest.TestCase):
 
     @patch('tap_ms_teams.client.threading.Timer')
     @patch('tap_ms_teams.client.requests.Session')
+    def test_rotated_refresh_token_is_reused_on_next_login(self, mock_session, mock_timer):
+        """A refresh_token rotated on one login() call is sent on the next call,
+        not the stale value from the original config."""
+        config = dict(default_config)
+        config_path = self._make_config_file(config)
+        try:
+            client = MicrosoftGraphClient(config_path, config)
+            mock_session_instance = mock_session.return_value
+            mock_session_instance.post.side_effect = [
+                MockResponse(200, json_data={
+                    'access_token': 'first_access',
+                    'refresh_token': 'rotated_refresh_token'
+                }),
+                MockResponse(200, json_data={'access_token': 'second_access'}),
+            ]
+
+            client.login()
+            client.login()
+
+            self.assertEqual(mock_session_instance.post.call_count, 2)
+            second_call_body = mock_session_instance.post.call_args_list[1].kwargs['data']
+            self.assertEqual(second_call_body['refresh_token'], 'rotated_refresh_token')
+            self.assertEqual(client.access_token, 'second_access')
+        finally:
+            os.unlink(config_path)
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
     def test_unchanged_refresh_token_not_written(self, mock_session, mock_timer):
         """When Microsoft returns the same refresh_token, _write_config is not called"""
         config = dict(default_config)
