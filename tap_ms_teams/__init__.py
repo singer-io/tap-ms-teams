@@ -95,7 +95,8 @@ def sync(client, config, catalog, state):
                         stream.update_bookmark(stream.name, stream.replication_key, max_bookmark_value)
                         stream.write_state()
             stream.update_currently_syncing(None)
-        stream.write_state()
+        if streams:
+            stream.write_state()
         LOGGER.info('Finished Sync..')
 
 

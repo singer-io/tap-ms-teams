@@ -20,10 +20,6 @@ class MsTeamsStartDateTest(StartDateTest, MsTeamsBaseTest):
             "channels",
             "channel_members",
             "channel_tabs",
-            "conversation_threads",
-            "conversations",
-            "conversation_posts",
-            "team_drives",
             "team_device_usage_report",
             # No Teams license assigned in test tenant -> these streams emit 0 records
             "channel_messages",
