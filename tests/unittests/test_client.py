@@ -1,3 +1,6 @@
+import json
+import os
+import tempfile
 import unittest
 from unittest.mock import patch, MagicMock, Mock
 from tap_ms_teams.client import MicrosoftGraphClient, Server5xxError, Server42xRateLimitError
@@ -7,6 +10,7 @@ default_config = {
     "client_id": "test_client_id",
     "client_secret": "test_client_secret",
     "tenant_id": "test_tenant_id",
+    "refresh_token": "test_refresh_token",
     "user_agent": "test_user_agent"
 }
 
@@ -30,7 +34,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_client_initialization(self, mock_session):
         """Test that client initializes correctly with config"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
 
         self.assertEqual(client.config, default_config)
         self.assertIsNone(client.access_token)
@@ -41,7 +45,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_login_success(self, mock_session, mock_timer):
         """Test successful login and token refresh"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
 
         mock_response = MockResponse(
             200,
@@ -57,6 +61,13 @@ class TestMicrosoftGraphClient(unittest.TestCase):
         self.assertEqual(client.client_secret, 'test_client_secret')
         self.assertEqual(client.tenant_id, 'test_tenant_id')
         mock_timer.assert_called_once()
+
+        # Assert the token request uses refresh_token grant, not client_credentials,
+        # so reverting to the old auth flow would fail this test
+        request_body = mock_session_instance.post.call_args.kwargs['data']
+        self.assertEqual(request_body['grant_type'], 'refresh_token')
+        self.assertEqual(request_body['refresh_token'], 'test_refresh_token')
+        self.assertNotIn('scope', request_body)
 
     def test_build_url(self):
         """Test URL building with parameters"""
@@ -74,7 +85,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_get_all_resources_with_pagination(self, mock_session):
         """Test fetching all resources with pagination"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
 
         # Mock paginated responses
@@ -100,7 +111,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_make_request_rate_limit_retry(self, mock_session, mock_sleep):
         """Test that rate limit triggers retry with proper wait"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
 
         # Mock rate limit response that will be returned every time
@@ -122,7 +133,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_make_request_401_triggers_relogin(self, mock_session):
         """Test that 401 status triggers login attempt"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'expired_token'
         client.login = MagicMock()
 
@@ -141,7 +152,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_make_request_500_raises_server_error(self, mock_session):
         """Test that 500 status raises Server5xxError"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
 
         server_error_response = MockResponse(500)
@@ -155,7 +166,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_make_request_post_method(self, mock_session):
         """Test POST request with data"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
 
         success_response = MockResponse(200, json_data={'access_token': 'new_token'})
@@ -174,7 +185,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
 
     def test_make_request_unsupported_method(self):
         """Test that unsupported HTTP method raises exception"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
 
         with self.assertRaises(Exception) as context:
@@ -185,7 +196,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.get')
     def test_stream_csv(self, mock_get):
         """Test CSV streaming functionality"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
 
         mock_response = Mock()
         mock_response.iter_lines.return_value = [
@@ -207,7 +218,7 @@ class TestMicrosoftGraphClient(unittest.TestCase):
     @patch('tap_ms_teams.client.requests.Session')
     def test_get_report_with_rate_limit(self, mock_session, mock_sleep):
         """Test get_report handles rate limiting"""
-        client = MicrosoftGraphClient(default_config)
+        client = MicrosoftGraphClient(None, default_config)
         client.access_token = 'test_token'
         client.stream_csv = MagicMock(return_value=[])
 
@@ -220,3 +231,128 @@ class TestMicrosoftGraphClient(unittest.TestCase):
             list(client.get_report('v1.0', 'reports/getTeamsDeviceUsageUserDetail'))
 
         mock_sleep.assert_called_with(30)
+
+
+class TestRefreshTokenRotation(unittest.TestCase):
+
+    def _make_config_file(self, config):
+        tmp = tempfile.NamedTemporaryFile('w', suffix='.json', delete=False, encoding='utf-8')
+        json.dump(config, tmp)
+        tmp.close()
+        return tmp.name
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_rotated_refresh_token_is_persisted(self, mock_session, mock_timer):
+        """When Microsoft returns a new refresh_token it is written to config file"""
+        config = dict(default_config)
+        config_path = self._make_config_file(config)
+        try:
+            client = MicrosoftGraphClient(config_path, config)
+            mock_session_instance = mock_session.return_value
+            mock_session_instance.post.return_value = MockResponse(200, json_data={
+                'access_token': 'new_access',
+                'refresh_token': 'rotated_refresh_token'
+            })
+
+            client.login()
+
+            self.assertEqual(client.refresh_token, 'rotated_refresh_token')
+            with open(config_path, encoding='utf-8') as f:
+                saved = json.load(f)
+            self.assertEqual(saved['refresh_token'], 'rotated_refresh_token')
+        finally:
+            os.unlink(config_path)
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_rotated_refresh_token_is_reused_on_next_login(self, mock_session, mock_timer):
+        """A refresh_token rotated on one login() call is sent on the next call,
+        not the stale value from the original config."""
+        config = dict(default_config)
+        config_path = self._make_config_file(config)
+        try:
+            client = MicrosoftGraphClient(config_path, config)
+            mock_session_instance = mock_session.return_value
+            mock_session_instance.post.side_effect = [
+                MockResponse(200, json_data={
+                    'access_token': 'first_access',
+                    'refresh_token': 'rotated_refresh_token'
+                }),
+                MockResponse(200, json_data={'access_token': 'second_access'}),
+            ]
+
+            client.login()
+            client.login()
+
+            self.assertEqual(mock_session_instance.post.call_count, 2)
+            second_call_body = mock_session_instance.post.call_args_list[1].kwargs['data']
+            self.assertEqual(second_call_body['refresh_token'], 'rotated_refresh_token')
+            self.assertEqual(client.access_token, 'second_access')
+        finally:
+            os.unlink(config_path)
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_unchanged_refresh_token_not_written(self, mock_session, mock_timer):
+        """When Microsoft returns the same refresh_token, _write_config is not called"""
+        config = dict(default_config)
+        config_path = self._make_config_file(config)
+        try:
+            client = MicrosoftGraphClient(config_path, config)
+            client._write_config = MagicMock()
+            mock_session_instance = mock_session.return_value
+            mock_session_instance.post.return_value = MockResponse(200, json_data={
+                'access_token': 'new_access',
+                'refresh_token': 'test_refresh_token'  # same as default_config
+            })
+
+            client.login()
+
+            client._write_config.assert_not_called()
+        finally:
+            os.unlink(config_path)
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_missing_refresh_token_in_response_not_written(self, mock_session, mock_timer):
+        """When Microsoft omits refresh_token in response, existing token is preserved"""
+        config = dict(default_config)
+        config_path = self._make_config_file(config)
+        try:
+            client = MicrosoftGraphClient(config_path, config)
+            client._write_config = MagicMock()
+            mock_session_instance = mock_session.return_value
+            mock_session_instance.post.return_value = MockResponse(200, json_data={
+                'access_token': 'new_access'
+                # no refresh_token key
+            })
+
+            client.login()
+
+            client._write_config.assert_not_called()
+            self.assertEqual(client.refresh_token, 'test_refresh_token')
+        finally:
+            os.unlink(config_path)
+
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_invalid_grant_raises_and_no_timer(self, mock_session, mock_timer):
+        """invalid_grant raises immediately and does not restart the timer"""
+        client = MicrosoftGraphClient(None, default_config)
+        mock_session_instance = mock_session.return_value
+        mock_session_instance.post.return_value = MockResponse(
+            400,
+            text='{"error": "invalid_grant", "error_description": "Token has expired"}'
+        )
+
+        with self.assertRaises(Exception) as ctx:
+            client.login()
+
+        self.assertIn('expired or revoked', str(ctx.exception))
+        mock_timer.assert_not_called()
+
+
+if __name__ == '__main__':
+    unittest.main()
+

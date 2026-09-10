@@ -5,7 +5,7 @@ import humps
 import singer
 import singer.metrics
 from singer.utils import now, strptime_to_utc
-from tap_ms_teams.client import GraphVersion
+from tap_ms_teams.client import GraphVersion, GraphForbiddenError
 from tap_ms_teams.transform import transform
 
 LOGGER = singer.get_logger()
@@ -24,6 +24,18 @@ class GraphStream:
     @staticmethod
     def get_abs_path(path):
         return os.path.join(os.path.dirname(os.path.realpath(__file__)), path)
+
+    @staticmethod
+    def get_resources_safely(client, version, endpoint, **kwargs):
+        """Wraps client.get_all_resources, skipping (returning []) and logging a
+        warning instead of crashing the whole sync when Graph returns a 403 for
+        this specific endpoint (e.g. missing license). Other errors (auth,
+        rate-limit, server, malformed request) still propagate."""
+        try:
+            return client.get_all_resources(version, endpoint, **kwargs)
+        except GraphForbiddenError as e:
+            LOGGER.warning("Skipping %s due to error: %s", endpoint, e)
+            return []
 
     def load_schema(self):
         schema_path = self.get_abs_path('schemas')
@@ -218,8 +230,8 @@ class GroupMembers(GraphStream):
     def sync(self, client, startdate=None):
         owners_result = []
         for group in Groups().get_all_groups(client):
-            resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group.get('id')))
+            resources = self.get_resources_safely(
+                client, self.version, self.endpoint.format(group_id=group.get('id')))
 
             # Inject group id
             for owner in resources:
@@ -244,8 +256,8 @@ class GroupOwners(GraphStream):
     def sync(self, client, startdate=None):
         owners_result = []
         for group in Groups().get_all_groups(client):
-            resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group.get('id')))
+            resources = self.get_resources_safely(
+                client, self.version, self.endpoint.format(group_id=group.get('id')))
 
             # Inject group id
             for owner in resources:
@@ -271,8 +283,8 @@ class TeamDrives(GraphStream):
         owners_result = []
         for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group_id))
+            resources = self.get_resources_safely(
+                client, self.version, self.endpoint.format(group_id=group_id))
 
             for resource in resources:
                 resource["group_id"] = group_id
@@ -296,8 +308,8 @@ class Channels(GraphStream):
         channels_result = []
         for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            resources = client.get_all_resources(
-                self.version, self.endpoint.format(group_id=group_id))
+            resources = self.get_resources_safely(
+                client, self.version, self.endpoint.format(group_id=group_id))
             for resource in resources:
                 resource['group_id'] = group_id
             transformed_resources = humps.decamelize(resources)
@@ -305,8 +317,8 @@ class Channels(GraphStream):
         yield channels_result
 
     def get_all_channels_for_group(self, client, group_id):
-        return client.get_all_resources(
-            self.version, self.endpoint.format(group_id=group_id))
+        return self.get_resources_safely(
+            client, self.version, self.endpoint.format(group_id=group_id))
 
 
 class ChannelMembers(GraphStream):
@@ -338,8 +350,8 @@ class ChannelMembers(GraphStream):
         yield humps.decamelize(result)
 
     def get_channel_members(self, client, group_id, channel_id):
-        return client.get_all_resources(
-            self.version, self.endpoint.format(group_id=group_id, channel_id=channel_id))
+        return self.get_resources_safely(
+            client, self.version, self.endpoint.format(group_id=group_id, channel_id=channel_id))
 
 
 class ChannelTabs(GraphStream):
@@ -362,7 +374,8 @@ class ChannelTabs(GraphStream):
                     client, group_id):
                 channel_id = channel.get('id')
 
-                channel_tabs = client.get_all_resources(
+                channel_tabs = self.get_resources_safely(
+                    client,
                     self.version,
                     self.endpoint.format(group_id=group_id,
                                          channel_id=channel_id))
@@ -390,8 +403,8 @@ class ChannelMessages(GraphStream):
         result = []
         for group in Groups().get_all_groups(client):
             group_id = group.get('id')
-            channels = client.get_all_resources(
-                Channels.version,
+            channels = self.get_resources_safely(
+                client, Channels.version,
                 Channels.endpoint.format(group_id=group_id))
 
             for channel in channels:
@@ -418,9 +431,10 @@ class ChannelMessages(GraphStream):
         endpoint = self.endpoint.format(group_id=group_id,
                                         channel_id=channel_id,
                                         top=self.top)
-        return client.get_all_resources(self.version,
-                                        endpoint,
-                                        filter_param=filter_param)
+        return self.get_resources_safely(client,
+                                         self.version,
+                                         endpoint,
+                                         filter_param=filter_param)
 
 
 class ChannelMessageReplies(GraphStream):
@@ -452,7 +466,8 @@ class ChannelMessageReplies(GraphStream):
                             startdate=startdate):
                     message_id = message.get('id')
 
-                    replies = client.get_all_resources(
+                    replies = self.get_resources_safely(
+                        client,
                         self.version,
                         self.endpoint.format(group_id=group_id,
                                              channel_id=channel_id,
@@ -492,8 +507,8 @@ class Conversations(GraphStream):
         yield humps.decamelize(results)
 
     def get_conversations_for_group(self, client, group_id):
-        return client.get_all_resources(
-            self.version, self.endpoint.format(group_id=group_id))
+        return self.get_resources_safely(
+            client, self.version, self.endpoint.format(group_id=group_id))
 
 
 class ConversationThreads(GraphStream):
@@ -524,7 +539,8 @@ class ConversationThreads(GraphStream):
         yield humps.decamelize(result)
 
     def get_threads_for_group(self, client, group_id, conversation_id):
-        return client.get_all_resources(
+        return self.get_resources_safely(
+            client,
             self.version,
             self.endpoint.format(group_id=group_id,
                                  conversation_id=conversation_id))
@@ -555,7 +571,8 @@ class ConversationPosts(GraphStream):
                         client, group_id=group_id,
                         conversation_id=conversation_id):
                     thread_id = thread.get('id')
-                    posts = client.get_all_resources(
+                    posts = self.get_resources_safely(
+                        client,
                         self.version,
                         self.endpoint.format(group_id=group_id,
                                              conversation_id=conversation_id,

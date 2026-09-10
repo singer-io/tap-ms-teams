@@ -95,19 +95,21 @@ def sync(client, config, catalog, state):
                         stream.update_bookmark(stream.name, stream.replication_key, max_bookmark_value)
                         stream.write_state()
             stream.update_currently_syncing(None)
-        stream.write_state()
+        if streams:
+            stream.write_state()
         LOGGER.info('Finished Sync..')
 
 
 @singer.utils.handle_top_exception(LOGGER)
 def main():
     parsed_args = singer.utils.parse_args(required_config_keys=[
-        'client_id', 'client_secret', 'tenant_id', 'start_date', 'user_agent'
+        'client_id', 'client_secret', 'tenant_id', 'refresh_token', 'start_date', 'user_agent'
     ])
     config = parsed_args.config
 
+    client = None
     try:
-        client = MicrosoftGraphClient(config)
+        client = MicrosoftGraphClient(parsed_args.config_path, config)
         client.login()
 
         if parsed_args.discover:

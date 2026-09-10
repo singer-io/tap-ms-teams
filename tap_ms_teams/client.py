@@ -1,5 +1,6 @@
 import codecs
 import csv
+import json
 import threading
 import urllib
 from enum import Enum
@@ -13,7 +14,6 @@ import singer.metrics
 LOGGER = singer.get_logger()  # noqa
 
 TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
-SCOPE = "https://graph.microsoft.com/.default"
 BASE_GRAPH_URL = 'https://graph.microsoft.com'
 TOKEN_EXPIRATION_PERIOD = 3599
 TOP_API_PARAM_DEFAULT = 500
@@ -31,11 +31,16 @@ class Server42xRateLimitError(Exception):
     pass
 
 
+class GraphForbiddenError(RuntimeError):
+    """Raised for 403 responses, e.g. a team/resource unavailable due to a missing license."""
+
+
 class MicrosoftGraphClient:
 
     MAX_TRIES = 5
 
-    def __init__(self, config):
+    def __init__(self, config_path, config):
+        self.config_path = config_path
         self.config = config
         self.session = requests.Session()
         self.login_timer = None
@@ -43,6 +48,7 @@ class MicrosoftGraphClient:
         self.client_secret = None
         self.client_id = None
         self.tenant_id = None
+        self.refresh_token = None
 
     @staticmethod
     def build_url(baseurl, version, path, args_dict):
@@ -57,28 +63,56 @@ class MicrosoftGraphClient:
         self.client_id = self.config.get('client_id')
         self.client_secret = self.config.get('client_secret')
         self.tenant_id = self.config.get('tenant_id')
+        # Use the in-memory refresh_token if already rotated, else fall back to config
+        if self.refresh_token is None:
+            self.refresh_token = self.config.get('refresh_token')
 
         try:
             body = {
-                'grant_type': 'client_credentials',
+                'grant_type': 'refresh_token',
                 'client_id': self.client_id,
                 'client_secret': self.client_secret,
-                'scope': SCOPE
+                'refresh_token': self.refresh_token,
             }
 
             with singer.http_request_timer('POST get access token'):
-                result = self.make_request(
-                    method='POST',
-                    url=TOKEN_URL.format(tenant_id=self.tenant_id),
-                    data=body)
+                try:
+                    result = self.make_request(
+                        method='POST',
+                        url=TOKEN_URL.format(tenant_id=self.tenant_id),
+                        data=body)
+                except RuntimeError as e:
+                    # invalid_grant is returned as 400 — token is permanently dead; don't retry
+                    if 'invalid_grant' in str(e):
+                        raise Exception(
+                            'MS Teams refresh_token is expired or revoked. '
+                            'Re-authenticate via Stitch to obtain a new token. '
+                            'Details: {}'.format(str(e)))
+                    raise
 
             self.access_token = result.get('access_token')
+            # Microsoft may rotate the refresh_token; keep the latest one in memory
+            new_refresh_token = result.get('refresh_token')
+            if new_refresh_token and new_refresh_token != self.refresh_token:
+                self.refresh_token = new_refresh_token
+                self._write_config(new_refresh_token)
 
-        finally:
-            self.login_timer = threading.Timer(TOKEN_EXPIRATION_PERIOD,
-                                               self.login)
+        except Exception:
+            raise
+        else:
+            self.login_timer = threading.Timer(TOKEN_EXPIRATION_PERIOD, self.login)
+            # daemon=True ensures the timer thread does not keep the process alive
+            self.login_timer.daemon = True
             self.login_timer.start()
 
+
+    def _write_config(self, refresh_token):
+        LOGGER.info("Credentials Refreshed")
+        with open(self.config_path, encoding='utf-8') as f:
+            config = json.load(f)
+        config['refresh_token'] = refresh_token
+        with open(self.config_path, 'w', encoding='utf-8') as f:
+            json.dump(config, f, indent=2)
 
     def get_all_resources(self,
                           version,
@@ -195,6 +229,9 @@ class MicrosoftGraphClient:
             raise Server42xRateLimitError()
         elif response.status_code >= 500:
             raise Server5xxError()
+
+        if response.status_code == 403:
+            raise GraphForbiddenError(response.text)
 
         if response.status_code not in [200, 201, 202]:
             raise RuntimeError(response.text)
