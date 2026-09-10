@@ -62,6 +62,13 @@ class TestMicrosoftGraphClient(unittest.TestCase):
         self.assertEqual(client.tenant_id, 'test_tenant_id')
         mock_timer.assert_called_once()
 
+        # Assert the token request uses refresh_token grant, not client_credentials,
+        # so reverting to the old auth flow would fail this test
+        request_body = mock_session_instance.post.call_args.kwargs['data']
+        self.assertEqual(request_body['grant_type'], 'refresh_token')
+        self.assertEqual(request_body['refresh_token'], 'test_refresh_token')
+        self.assertNotIn('scope', request_body)
+
     def test_build_url(self):
         """Test URL building with parameters"""
         url = MicrosoftGraphClient.build_url(

@@ -5,7 +5,7 @@ import humps
 import singer
 import singer.metrics
 from singer.utils import now, strptime_to_utc
-from tap_ms_teams.client import GraphVersion
+from tap_ms_teams.client import GraphVersion, GraphForbiddenError
 from tap_ms_teams.transform import transform
 
 LOGGER = singer.get_logger()
@@ -28,11 +28,12 @@ class GraphStream:
     @staticmethod
     def get_resources_safely(client, version, endpoint, **kwargs):
         """Wraps client.get_all_resources, skipping (returning []) and logging a
-        warning instead of crashing the whole sync when Graph returns an error
-        for this specific endpoint (e.g. 403 Forbidden due to a missing license)."""
+        warning instead of crashing the whole sync when Graph returns a 403 for
+        this specific endpoint (e.g. missing license). Other errors (auth,
+        rate-limit, server, malformed request) still propagate."""
         try:
             return client.get_all_resources(version, endpoint, **kwargs)
-        except RuntimeError as e:
+        except GraphForbiddenError as e:
             LOGGER.warning("Skipping %s due to error: %s", endpoint, e)
             return []
 

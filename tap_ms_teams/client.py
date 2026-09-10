@@ -31,6 +31,10 @@ class Server42xRateLimitError(Exception):
     pass
 
 
+class GraphForbiddenError(RuntimeError):
+    """Raised for 403 responses, e.g. a team/resource unavailable due to a missing license."""
+
+
 class MicrosoftGraphClient:
 
     MAX_TRIES = 5
@@ -225,6 +229,9 @@ class MicrosoftGraphClient:
             raise Server42xRateLimitError()
         elif response.status_code >= 500:
             raise Server5xxError()
+
+        if response.status_code == 403:
+            raise GraphForbiddenError(response.text)
 
         if response.status_code not in [200, 201, 202]:
             raise RuntimeError(response.text)
