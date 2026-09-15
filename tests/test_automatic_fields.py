@@ -14,6 +14,12 @@ class MsTeamsAutomaticFields(MinimumSelectionTest, MsTeamsBaseTest):
 
     def streams_to_test(self):
         streams_to_exclude = set({
-            'team_device_usage_report'
+            'team_device_usage_report',
+            # No Teams license assigned in test tenant -> these streams emit 0 records
+            'channels',
+            'channel_members',
+            'channel_tabs',
+            'channel_messages',
+            'channel_message_replies',
         })
         return self.expected_stream_names().difference(streams_to_exclude)
