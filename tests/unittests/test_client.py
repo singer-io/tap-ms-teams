@@ -352,6 +352,25 @@ class TestRefreshTokenRotation(unittest.TestCase):
         self.assertIn('expired or revoked', str(ctx.exception))
         mock_timer.assert_not_called()
 
+    @patch('tap_ms_teams.client.threading.Timer')
+    @patch('tap_ms_teams.client.requests.Session')
+    def test_login_client_credentials_without_refresh_token(self, mock_session, mock_timer):
+        """Without refresh_token in config, client_credentials grant is used"""
+        config = {k: v for k, v in default_config.items() if k != 'refresh_token'}
+        client = MicrosoftGraphClient(None, config)
+        mock_session_instance = mock_session.return_value
+        mock_session_instance.post.return_value = MockResponse(
+            200, json_data={'access_token': 'cc_token', 'refresh_token': 'ignored'})
+
+        client.login()
+
+        self.assertEqual(client.access_token, 'cc_token')
+        body = mock_session_instance.post.call_args.kwargs['data']
+        self.assertEqual(body['grant_type'], 'client_credentials')
+        self.assertEqual(body['scope'], 'https://graph.microsoft.com/.default')
+        self.assertNotIn('refresh_token', body)
+        self.assertIsNone(client.refresh_token)
+
 
 if __name__ == '__main__':
     unittest.main()

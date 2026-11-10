@@ -103,7 +103,7 @@ def sync(client, config, catalog, state):
 @singer.utils.handle_top_exception(LOGGER)
 def main():
     parsed_args = singer.utils.parse_args(required_config_keys=[
-        'client_id', 'client_secret', 'tenant_id', 'refresh_token', 'start_date', 'user_agent'
+        'client_id', 'client_secret', 'tenant_id', 'start_date', 'user_agent'
     ])
     config = parsed_args.config
 
