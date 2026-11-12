@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.2.0
+  * Support both `client_credentials` and `refresh_token` (OAuth) authentication. `refresh_token` is optional: when present in the config the refresh_token grant is used, otherwise client credentials. [#14](https://github.com/singer-io/tap-ms-teams/pull/14)
+
 ## 1.1.0
   * Switch authentication from `client_credentials` to `refresh_token` grant to support Stitch platform OAuth flow. [#13](https://github.com/singer-io/tap-ms-teams/pull/13)
   * Write rotated `refresh_token` back to config file when Microsoft issues a new one.

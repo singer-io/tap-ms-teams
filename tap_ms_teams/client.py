@@ -14,6 +14,7 @@ import singer.metrics
 LOGGER = singer.get_logger()  # noqa
 
 TOKEN_URL = "https://login.microsoftonline.com/{tenant_id}/oauth2/v2.0/token"
+SCOPE = "https://graph.microsoft.com/.default"
 BASE_GRAPH_URL = 'https://graph.microsoft.com'
 TOKEN_EXPIRATION_PERIOD = 3599
 TOP_API_PARAM_DEFAULT = 500
@@ -68,12 +69,22 @@ class MicrosoftGraphClient:
             self.refresh_token = self.config.get('refresh_token')
 
         try:
-            body = {
-                'grant_type': 'refresh_token',
-                'client_id': self.client_id,
-                'client_secret': self.client_secret,
-                'refresh_token': self.refresh_token,
-            }
+            if self.refresh_token:
+                # OAuth credentials (e.g. Stitch): refresh_token grant
+                body = {
+                    'grant_type': 'refresh_token',
+                    'client_id': self.client_id,
+                    'client_secret': self.client_secret,
+                    'refresh_token': self.refresh_token,
+                }
+            else:
+                # Client credentials: app-only flow
+                body = {
+                    'grant_type': 'client_credentials',
+                    'client_id': self.client_id,
+                    'client_secret': self.client_secret,
+                    'scope': SCOPE,
+                }
 
             with singer.http_request_timer('POST get access token'):
                 try:
@@ -83,7 +94,7 @@ class MicrosoftGraphClient:
                         data=body)
                 except RuntimeError as e:
                     # invalid_grant is returned as 400 — token is permanently dead; don't retry
-                    if 'invalid_grant' in str(e):
+                    if self.refresh_token and 'invalid_grant' in str(e):
                         raise Exception(
                             'MS Teams refresh_token is expired or revoked. '
                             'Re-authenticate via Stitch to obtain a new token. '
@@ -93,7 +104,7 @@ class MicrosoftGraphClient:
             self.access_token = result.get('access_token')
             # Microsoft may rotate the refresh_token; keep the latest one in memory
             new_refresh_token = result.get('refresh_token')
-            if new_refresh_token and new_refresh_token != self.refresh_token:
+            if self.refresh_token and new_refresh_token and new_refresh_token != self.refresh_token:
                 self.refresh_token = new_refresh_token
                 self._write_config(new_refresh_token)
 
